@@ -1,15 +1,15 @@
 {
   "projects": {
-    "default": "your-firebase-project-id"
+    "default": "fleet-management-57ff5"
   },
   "targets": {
-    "your-firebase-project-id": {
+    "fleet-management-57ff5": {
       "hosting": {
         "admin": [
-          "your-admin-site-id"
+          "fleet-management-admin"
         ],
         "client": [
-          "your-client-site-id"
+          "fleet-management-client"
         ]
       }
     }

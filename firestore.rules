@@ -1,0 +1,117 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasUserDoc() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function requestTenantId() {
+      return hasUserDoc() ? userDoc().data.tenant_id : null;
+    }
+
+    function isSameTenant(resourceTenantId) {
+      return isAuthenticated() && requestTenantId() != null && resourceTenantId == requestTenantId();
+    }
+
+    function hasRole(role) {
+      return hasUserDoc()
+        && userDoc().data.roles_names is list
+        && role in userDoc().data.roles_names;
+    }
+
+    function isAdmin() {
+      return hasRole('admin') || hasRole('super_admin');
+    }
+
+    function isNewOrSameTenant() {
+      return request.resource.data.tenant_id == requestTenantId();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        userId == request.auth.uid
+        || (resource.data.tenant_id == requestTenantId() && isAdmin())
+      );
+
+      allow create: if isAuthenticated() && userId == request.auth.uid
+        && request.resource.data.tenant_id == requestTenantId();
+
+      allow update: if isAuthenticated() && (
+        userId == request.auth.uid
+        || (resource.data.tenant_id == requestTenantId() && isAdmin())
+      );
+
+      allow delete: if isAuthenticated()
+        && resource.data.tenant_id == requestTenantId()
+        && isAdmin();
+    }
+
+    match /roles/{roleId} {
+      allow read: if isAuthenticated() && resource.data.tenant_id == requestTenantId();
+      allow create, update, delete: if isAuthenticated()
+        && requestTenantId() != null
+        && isAdmin()
+        && (
+          !exists(/databases/$(database)/documents/roles/$(roleId))
+          || resource.data.tenant_id == requestTenantId()
+        )
+        && isNewOrSameTenant();
+    }
+
+    match /{collectionName}/{docId} {
+      allow read: if isAuthenticated()
+        && collectionName in [
+          'vehicles',
+          'drivers',
+          'service_requests',
+          'work_orders',
+          'invoices',
+          'quotes',
+          'vendors',
+          'approvals',
+          'preventive_rules',
+          'notifications'
+        ]
+        && resource.data.tenant_id == requestTenantId();
+
+      allow create: if isAuthenticated()
+        && collectionName in [
+          'vehicles',
+          'drivers',
+          'service_requests',
+          'work_orders',
+          'invoices',
+          'quotes',
+          'vendors',
+          'approvals',
+          'preventive_rules',
+          'notifications'
+        ]
+        && request.resource.data.tenant_id == requestTenantId();
+
+      allow update, delete: if isAuthenticated()
+        && collectionName in [
+          'vehicles',
+          'drivers',
+          'service_requests',
+          'work_orders',
+          'invoices',
+          'quotes',
+          'vendors',
+          'approvals',
+          'preventive_rules',
+          'notifications'
+        ]
+        && resource.data.tenant_id == requestTenantId()
+        && request.resource.data.tenant_id == requestTenantId();
+    }
+  }
+}

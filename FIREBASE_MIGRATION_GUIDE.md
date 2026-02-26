@@ -33,6 +33,12 @@ To deploy everything, choose one of these paths:
   - `npm run firebase:deploy:admin`
   - `npm run firebase:deploy:client`
   - `npm run firebase:deploy`
+   - `npm run firebase:deploy:firestore`
+   - `npm run firebase:deploy:rules`
+   - `npm run firebase:deploy:indexes`
+- Firestore configuration files:
+   - `firestore.rules`
+   - `firestore.indexes.json`
 - Frontend document upload/download calls now use `VITE_API_BASE_URL` (no hardcoded localhost)
 - `.env.production.example` created for both frontend apps
 - Firebase Auth support added in both frontends (switchable by env)
@@ -90,6 +96,18 @@ With this setting:
    - Set `VITE_API_BASE_URL` to your deployed API URL
 6. Deploy:
    - `npm run firebase:deploy`
+
+## Deploy Firestore security + indexes
+
+After selecting your Firebase project and creating Firestore in Native mode:
+
+1. Deploy rules and indexes:
+   - `npm run firebase:deploy:firestore`
+2. Or deploy separately:
+   - `npm run firebase:deploy:rules`
+   - `npm run firebase:deploy:indexes`
+
+Rules are tenant-aware and require authenticated users, with role checks for role management.
 
 ## Full backend conversion scope (Laravel -> Firebase)
 
