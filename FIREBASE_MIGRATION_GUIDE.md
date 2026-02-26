@@ -41,6 +41,7 @@ To deploy everything, choose one of these paths:
 - Firestore Work Orders + Invoices CRUD support added in both frontends (switchable by env)
 - Firestore Quotes + Vendors CRUD support added in both frontends (switchable by env)
 - Firestore Approvals + Preventive Rules CRUD support added in both frontends (switchable by env)
+- Firestore Users + Roles + Notifications support added in both frontends (switchable by env)
 
 ## Run with Firebase (current implementation)
 
@@ -66,6 +67,10 @@ With this setting:
 - Vendor endpoints (`/vendors`) use Firestore
 - Approval endpoints (`/approvals`) use Firestore
 - Preventive rule endpoints (`/preventive-rules`) use Firestore
+- User endpoints (`/users`) use Firestore
+- Role endpoints (`/roles`) use Firestore
+- Notification endpoints (`/notifications`) use Firestore
+- Notification mark-sent endpoint (`/notifications/{id}/mark-sent`) updates Firestore
 - Other endpoints continue using your API base URL
 
 ## Deploy frontends to Firebase Hosting
@@ -103,7 +108,7 @@ A full rewrite requires rebuilding these in Firebase Functions and updating both
 1. **Phase A: Hosting + API URL cleanup** (completed)
 2. **Phase B: Auth + first data domain** (partially completed)
    - Firebase Auth added in frontends
-   - Vehicles, drivers, service-requests, work-orders, invoices, quotes, vendors, approvals, and preventive-rules migrated to Firestore access path in frontends
+   - Vehicles, drivers, service-requests, work-orders, invoices, quotes, vendors, approvals, preventive-rules, users, roles, and notifications migrated to Firestore access path in frontends
 3. **Phase C: Core data migration**
    - Migrate `vehicles`, `drivers`, `service-requests`, `work-orders`, `invoices` to Firestore
 4. **Phase D: Files + notifications**
