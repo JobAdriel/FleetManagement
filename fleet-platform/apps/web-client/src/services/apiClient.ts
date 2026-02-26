@@ -14,6 +14,10 @@ const QUOTES_ENDPOINT = /^\/quotes(?:\/([^/?]+))?(?:\?.*)?$/;
 const VENDORS_ENDPOINT = /^\/vendors(?:\/([^/?]+))?(?:\?.*)?$/;
 const APPROVALS_ENDPOINT = /^\/approvals(?:\/([^/?]+))?(?:\?.*)?$/;
 const PREVENTIVE_RULES_ENDPOINT = /^\/preventive-rules(?:\/([^/?]+))?(?:\?.*)?$/;
+const USERS_ENDPOINT = /^\/users(?:\/([^/?]+))?(?:\?.*)?$/;
+const ROLES_ENDPOINT = /^\/roles(?:\/([^/?]+))?(?:\?.*)?$/;
+const NOTIFICATIONS_ENDPOINT = /^\/notifications(?:\/([^/?]+))?(?:\?.*)?$/;
+const NOTIFICATION_MARK_SENT_ENDPOINT = /^\/notifications\/([^/?]+)\/mark-sent(?:\?.*)?$/;
 
 export const buildApiUrl = (endpoint: string): string => {
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
@@ -236,6 +240,56 @@ const handleFirestorePreventiveRules = async (
   );
 };
 
+const handleFirestoreUsers = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(method, endpoint, USERS_ENDPOINT, 'users', 'User not found', body);
+};
+
+const handleFirestoreRoles = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(method, endpoint, ROLES_ENDPOINT, 'roles', 'Role not found', body);
+};
+
+const handleFirestoreNotificationMarkSent = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string
+): Promise<ApiResponse | null> => {
+  if (method !== 'PATCH') return null;
+
+  const match = endpoint.match(NOTIFICATION_MARK_SENT_ENDPOINT);
+  if (!match) return null;
+
+  const notificationId = match[1];
+  const data = {
+    status: 'sent',
+    sent_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  await updateDoc(doc(db, 'notifications', notificationId), data);
+  return {
+    data: {
+      id: notificationId,
+      ...data,
+    },
+    status: 200,
+  };
+};
+
+const handleFirestoreNotifications = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(method, endpoint, NOTIFICATIONS_ENDPOINT, 'notifications', 'Notification not found', body);
+};
+
 export const apiClient = {
   async request<T = unknown>(
     endpoint: string,
@@ -246,7 +300,8 @@ export const apiClient = {
     if (IS_FIREBASE_DATA) {
       try {
         const firebaseResponse =
-          await handleFirestoreVehicles(method, endpoint, body)
+          await handleFirestoreNotificationMarkSent(method, endpoint)
+          || await handleFirestoreVehicles(method, endpoint, body)
           || await handleFirestoreDrivers(method, endpoint, body)
           || await handleFirestoreServiceRequests(method, endpoint, body)
           || await handleFirestoreWorkOrders(method, endpoint, body)
@@ -254,7 +309,10 @@ export const apiClient = {
           || await handleFirestoreQuotes(method, endpoint, body)
           || await handleFirestoreVendors(method, endpoint, body)
           || await handleFirestoreApprovals(method, endpoint, body)
-          || await handleFirestorePreventiveRules(method, endpoint, body);
+          || await handleFirestorePreventiveRules(method, endpoint, body)
+          || await handleFirestoreUsers(method, endpoint, body)
+          || await handleFirestoreRoles(method, endpoint, body)
+          || await handleFirestoreNotifications(method, endpoint, body);
         if (firebaseResponse) {
           return firebaseResponse as ApiResponse<T>;
         }
