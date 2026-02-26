@@ -17,10 +17,6 @@ service cloud.firestore {
       return hasUserDoc() ? userDoc().data.tenant_id : null;
     }
 
-    function isSameTenant(resourceTenantId) {
-      return isAuthenticated() && requestTenantId() != null && resourceTenantId == requestTenantId();
-    }
-
     function hasRole(role) {
       return hasUserDoc()
         && userDoc().data.roles_names is list
@@ -29,6 +25,22 @@ service cloud.firestore {
 
     function isAdmin() {
       return hasRole('admin') || hasRole('super_admin');
+    }
+
+    function canCreateCollection(collectionName) {
+      return isAdmin()
+        || collectionName == 'service_requests'
+        || collectionName == 'notifications';
+    }
+
+    function canUpdateCollection(collectionName) {
+      return isAdmin()
+        || collectionName == 'service_requests'
+        || collectionName == 'notifications';
+    }
+
+    function canDeleteCollection(collectionName) {
+      return isAdmin() || collectionName == 'notifications';
     }
 
     function isNewOrSameTenant() {
@@ -42,7 +54,7 @@ service cloud.firestore {
       );
 
       allow create: if isAuthenticated() && userId == request.auth.uid
-        && request.resource.data.tenant_id == requestTenantId();
+        && request.resource.data.tenant_id is string;
 
       allow update: if isAuthenticated() && (
         userId == request.auth.uid
@@ -95,9 +107,10 @@ service cloud.firestore {
           'preventive_rules',
           'notifications'
         ]
-        && request.resource.data.tenant_id == requestTenantId();
+        && request.resource.data.tenant_id == requestTenantId()
+        && canCreateCollection(collectionName);
 
-      allow update, delete: if isAuthenticated()
+      allow update: if isAuthenticated()
         && collectionName in [
           'vehicles',
           'drivers',
@@ -111,7 +124,24 @@ service cloud.firestore {
           'notifications'
         ]
         && resource.data.tenant_id == requestTenantId()
-        && request.resource.data.tenant_id == requestTenantId();
+        && request.resource.data.tenant_id == requestTenantId()
+        && canUpdateCollection(collectionName);
+
+      allow delete: if isAuthenticated()
+        && collectionName in [
+          'vehicles',
+          'drivers',
+          'service_requests',
+          'work_orders',
+          'invoices',
+          'quotes',
+          'vendors',
+          'approvals',
+          'preventive_rules',
+          'notifications'
+        ]
+        && resource.data.tenant_id == requestTenantId()
+        && canDeleteCollection(collectionName);
     }
   }
 }

@@ -109,6 +109,32 @@ After selecting your Firebase project and creating Firestore in Native mode:
 
 Rules are tenant-aware and require authenticated users, with role checks for role management.
 
+## Production smoke-test checklist
+
+After deploy, verify these in both admin and client apps:
+
+1. Auth
+   - Sign up and sign in succeeds
+   - Sign out clears session and redirects to login
+
+2. Tenant isolation
+   - User from Tenant A cannot read/write Tenant B documents
+   - Queries return only current tenant data
+
+3. Core CRUD (migrated resources)
+   - Create/list/update/delete works for vehicles, drivers, service requests, work orders, invoices
+   - Create/list/update/delete works for quotes, vendors, approvals, preventive rules
+   - Users/roles and notifications load correctly
+   - Notification mark-read (`/notifications/{id}/mark-sent`) updates status
+
+4. Permissions
+   - Non-admin users cannot modify admin-managed resources (roles and protected collections)
+   - Admin users can perform management actions in-tenant
+
+5. Hosting routes
+   - Deep links load correctly (SPA rewrite)
+   - Refresh on non-root routes does not 404
+
 ## Full backend conversion scope (Laravel -> Firebase)
 
 You currently expose many REST endpoints in `fleet-platform/apps/api/routes/api.php`:
