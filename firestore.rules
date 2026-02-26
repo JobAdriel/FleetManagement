@@ -1,6 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Role permission matrix (enforced by helper functions below):
+    // - Admin/super_admin: full in-tenant CRUD across migrated collections.
+    // - Non-admin (same tenant):
+    //   - Read: allowed on migrated collections.
+    //   - Create: allowed only for service_requests.
+    //   - Update: allowed only for notifications (mark-read flow).
+    //   - Delete: not allowed.
+    // - Cross-tenant read/write: denied for all roles.
+
     function isAuthenticated() {
       return request.auth != null;
     }
