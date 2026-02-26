@@ -1,0 +1,82 @@
+.document-list {
+  margin: 20px 0;
+}
+
+.documents-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.documents-table thead {
+  background-color: #f8f9fa;
+}
+
+.documents-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.documents-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #555;
+}
+
+.documents-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.documents-table .actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-small.btn-primary {
+  background-color: #3498db;
+  color: white;
+}
+
+.btn-small.btn-primary:hover {
+  background-color: #2980b9;
+}
+
+.btn-small.btn-danger {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-small.btn-danger:hover {
+  background-color: #c0392b;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #95a5a6;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #95a5a6;
+  background: white;
+  border-radius: 8px;
+  border: 2px dashed #ddd;
+}

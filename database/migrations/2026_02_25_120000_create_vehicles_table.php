@@ -1,0 +1,27 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('vehicles', function (Blueprint $table) {
+            $table->id();
+            $table->string('plate_no', 30)->unique();
+            $table->string('make', 100);
+            $table->string('model', 100);
+            $table->unsignedSmallInteger('year')->nullable();
+            $table->enum('status', ['active', 'in_maintenance', 'inactive'])->default('active');
+            $table->unsignedBigInteger('odometer')->default(0);
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('vehicles');
+    }
+};

@@ -1,0 +1,33 @@
+{
+  "name": "fleet-management-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fleet Management Platform - Monorepo",
+  "workspaces": [
+    "fleet-platform/apps/web-admin",
+    "fleet-platform/apps/web-client",
+    "fleet-platform/apps/admin"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w fleet-platform/apps/web-admin",
+    "dev:admin": "npm run dev -w fleet-platform/apps/web-admin",
+    "dev:client": "npm run dev -w fleet-platform/apps/web-client",
+    "dev:all": "concurrently \"npm run dev:admin\" \"npm run dev:client\"",
+    "build": "npm run build --workspaces",
+    "build:admin": "npm run build -w fleet-platform/apps/web-admin",
+    "build:client": "npm run build -w fleet-platform/apps/web-client",
+    "test": "npm run test -w fleet-platform/apps/admin",
+    "test:ui": "npm run test:ui -w fleet-platform/apps/admin",
+    "test:e2e": "npm run test:e2e -w fleet-platform/apps/admin",
+    "test:e2e:ui": "npm run test:e2e:ui -w fleet-platform/apps/admin",
+    "lint": "npm run lint --workspaces",
+    "install:all": "npm install --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

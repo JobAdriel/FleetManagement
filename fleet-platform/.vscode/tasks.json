@@ -1,0 +1,88 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Local Stack",
+      "type": "shell",
+      "command": "docker",
+      "args": [
+        "compose",
+        "--env-file",
+        ".env",
+        "up",
+        "-d"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/fleet-platform/infra"
+      },
+      "group": "build"
+    },
+    {
+      "label": "Initialize Database",
+      "type": "shell",
+      "command": "php",
+      "args": [
+        "artisan",
+        "migrate",
+        "--seed"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/fleet-platform/apps/api"
+      }
+    },
+    {
+      "label": "Open Admin & Client",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Start-Process http://localhost:5174; Start-Process http://localhost:5175; Start-Process http://localhost:8025"
+      ]
+    },
+    {
+      "label": "Smoke Test: Pilot Flow",
+      "type": "shell",
+      "command": "echo",
+      "args": [
+        "Run manual pilot flow per docs/runbook.md and docs/test-scenarios.md"
+      ]
+    },
+    {
+      "label": "Run Schedules Now",
+      "type": "shell",
+      "command": "php",
+      "args": [
+        "artisan",
+        "schedule:run"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/fleet-platform/apps/api"
+      }
+    },
+    {
+      "label": "Export Reports",
+      "type": "shell",
+      "command": "echo",
+      "args": [
+        "Trigger analytics export endpoints once API implementation is complete"
+      ]
+    },
+    {
+      "label": "Tear Down Stack",
+      "type": "shell",
+      "command": "docker",
+      "args": [
+        "compose",
+        "--env-file",
+        ".env",
+        "down",
+        "-v"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/fleet-platform/infra"
+      },
+      "group": "build"
+    }
+  ]
+}

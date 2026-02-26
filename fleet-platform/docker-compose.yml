@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  # ===== Laravel API =====
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: fleet-api
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=${APP_KEY:-base64:insert-key-here}
+      - APP_URL=http://localhost:8000
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE:-fleet_management}
+      - DB_USERNAME=${DB_USERNAME:-fleet_user}
+      - DB_PASSWORD=${DB_PASSWORD:-fleet_password}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=cookie
+      - SANCTUM_STATEFUL_DOMAINS=localhost:3000,localhost:3001,localhost:5173
+      - SANCTUM_API_TOKEN_EXPIRATION=60
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app
+      - /app/vendor
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fleet-network
+    command: >
+      sh -c "composer install &&
+             php artisan migrate --force &&
+             php artisan db:seed --force &&
+             php artisan serve --host=0.0.0.0 --port=8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== PostgreSQL Database =====
+  postgres:
+    image: postgres:16-alpine
+    container_name: fleet-postgres
+    environment:
+      - POSTGRES_DB=${DB_DATABASE:-fleet_management}
+      - POSTGRES_USER=${DB_USERNAME:-fleet_user}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-fleet_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fleet-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-fleet_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== Redis Cache =====
+  redis:
+    image: redis:7-alpine
+    container_name: fleet-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fleet-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== MinIO (S3-compatible storage) =====
+  minio:
+    image: minio/minio:latest
+    container_name: fleet-minio
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/minio_data
+    networks:
+      - fleet-network
+    command: server /minio_data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== React Admin App =====
+  web-admin:
+    build:
+      context: ./apps/web-admin
+      dockerfile: Dockerfile
+    container_name: fleet-web-admin
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+      - VITE_APP_ENV=production
+    depends_on:
+      - api
+    networks:
+      - fleet-network
+    volumes:
+      - ./apps/web-admin/src:/app/src
+    profiles:
+      - dev
+
+  # ===== React Client App =====
+  web-client:
+    build:
+      context: ./apps/web-client
+      dockerfile: Dockerfile
+    container_name: fleet-web-client
+    ports:
+      - "3001:3001"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+      - VITE_APP_ENV=production
+    depends_on:
+      - api
+    networks:
+      - fleet-network
+    volumes:
+      - ./apps/web-client/src:/app/src
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  fleet-network:
+    driver: bridge

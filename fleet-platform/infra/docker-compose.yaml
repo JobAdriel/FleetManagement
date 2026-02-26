@@ -1,0 +1,105 @@
+name: fleet-platform
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: fleet-db
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: fleet-redis
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    container_name: fleet-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: fleet-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  api:
+    image: php:8.3-fpm-alpine
+    container_name: fleet-api
+    working_dir: /var/www/html
+    volumes:
+      - ../apps/api:/var/www/html
+    depends_on:
+      - db
+      - redis
+
+  web:
+    image: nginx:stable-alpine
+    container_name: fleet-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ../apps/api:/var/www/html
+    depends_on:
+      - api
+
+  queue:
+    image: php:8.3-cli-alpine
+    container_name: fleet-queue
+    working_dir: /var/www/html
+    command: sh -c "sleep infinity"
+    volumes:
+      - ../apps/api:/var/www/html
+    depends_on:
+      - api
+      - redis
+
+  scheduler:
+    image: php:8.3-cli-alpine
+    container_name: fleet-scheduler
+    working_dir: /var/www/html
+    command: sh -c "sleep infinity"
+    volumes:
+      - ../apps/api:/var/www/html
+    depends_on:
+      - api
+
+  web-admin:
+    image: node:22-alpine
+    container_name: fleet-web-admin
+    working_dir: /app
+    command: sh -c "sleep infinity"
+    volumes:
+      - ../apps/web-admin:/app
+    ports:
+      - "5174:5174"
+
+  web-client:
+    image: node:22-alpine
+    container_name: fleet-web-client
+    working_dir: /app
+    command: sh -c "sleep infinity"
+    volumes:
+      - ../apps/web-client:/app
+    ports:
+      - "5175:5175"
+
+volumes:
+  pg_data:
+  minio_data:

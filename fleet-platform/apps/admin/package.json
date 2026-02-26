@@ -1,0 +1,36 @@
+{
+  "name": "admin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fleet Management Platform - Testing Suite",
+  "type": "module",
+  "scripts": {
+    "lint": "echo 'Admin is test-only; linting handled by TypeScript'",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^24.10.13",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "@vitest/ui": "^3.0.0",
+    "happy-dom": "^15.11.7",
+    "jsdom": "^25.0.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^3.0.0"
+  }
+}
