@@ -184,3 +184,15 @@ Start with a production-safe intermediate architecture:
 - Keep Laravel backend for now (deploy to Cloud Run)
 - Deploy both frontends on Firebase Hosting
 - Then migrate APIs endpoint-by-endpoint to Firebase Functions
+
+## Policy change log
+
+### 2026-02-26
+- Added tenant-aware Firestore rules and deployed them to production.
+- Added Firestore composite indexes for migrated collections and deployed indexes.
+- Tightened permissions to role-based behavior:
+   - Admin/super_admin: full in-tenant CRUD on migrated collections.
+   - Non-admin: create `service_requests`, update `notifications` (mark-read flow), read-only for admin-managed resources.
+   - Delete operations restricted to admin/super_admin.
+- Added and documented Firebase Hosting multisite deployment for admin/client apps.
+- Added production env setup for Firebase Auth + Firestore data provider in both frontends.
