@@ -28,9 +28,7 @@ service cloud.firestore {
     }
 
     function canCreateCollection(collectionName) {
-      return isAdmin()
-        || collectionName == 'service_requests'
-        || collectionName == 'notifications';
+      return isAdmin() || collectionName == 'service_requests';
     }
 
     function canUpdateCollection(collectionName) {
@@ -39,8 +37,8 @@ service cloud.firestore {
         || collectionName == 'notifications';
     }
 
-    function canDeleteCollection(collectionName) {
-      return isAdmin() || collectionName == 'notifications';
+    function canDeleteCollection() {
+      return isAdmin();
     }
 
     function isNewOrSameTenant() {
@@ -141,7 +139,7 @@ service cloud.firestore {
           'notifications'
         ]
         && resource.data.tenant_id == requestTenantId()
-        && canDeleteCollection(collectionName);
+        && canDeleteCollection();
     }
   }
 }

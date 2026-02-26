@@ -109,6 +109,23 @@ After selecting your Firebase project and creating Firestore in Native mode:
 
 Rules are tenant-aware and require authenticated users, with role checks for role management.
 
+Current permission defaults:
+- Admin/super_admin: full in-tenant CRUD across migrated collections
+- Non-admin: can create service requests, can update notifications (mark-read flow), read-only on admin-managed resources
+- Delete operations: admin-only
+
+### Role permission matrix (Firestore)
+
+| Resource / Action | Admin / Super Admin | Non-Admin (same tenant) |
+|---|---|---|
+| Read migrated collections | ✅ | ✅ |
+| Create `service_requests` | ✅ | ✅ |
+| Create admin-managed resources (`vehicles`, `drivers`, `work_orders`, `invoices`, `quotes`, `vendors`, `approvals`, `preventive_rules`, `roles`) | ✅ | ❌ |
+| Update `notifications` (mark-read flow) | ✅ | ✅ |
+| Update admin-managed resources | ✅ | ❌ |
+| Delete any migrated resource | ✅ | ❌ |
+| Cross-tenant read/write | ❌ | ❌ |
+
 ## Production smoke-test checklist
 
 After deploy, verify these in both admin and client apps:
