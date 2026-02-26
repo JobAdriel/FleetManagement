@@ -9,10 +9,16 @@
     "fleet-platform/apps/admin"
   ],
   "scripts": {
-    "dev": "npm run dev -w fleet-platform/apps/web-admin",
+    "dev": "npm run dev:admin",
+    "dev:full": "concurrently -k -n API,ADMIN,CLIENT \"npm run dev:api\" \"npm run dev:admin\" \"npm run dev:client\"",
+    "dev:api": "npm --prefix fleet-platform/apps/api run serve",
     "dev:admin": "npm run dev -w fleet-platform/apps/web-admin",
     "dev:client": "npm run dev -w fleet-platform/apps/web-client",
     "dev:all": "concurrently \"npm run dev:admin\" \"npm run dev:client\"",
+    "build:firebase": "npm run build:admin && npm run build:client",
+    "firebase:deploy:admin": "npm run build:admin && npx firebase-tools deploy --only hosting:admin",
+    "firebase:deploy:client": "npm run build:client && npx firebase-tools deploy --only hosting:client",
+    "firebase:deploy": "npm run build:firebase && npx firebase-tools deploy --only hosting",
     "build": "npm run build --workspaces",
     "build:admin": "npm run build -w fleet-platform/apps/web-admin",
     "build:client": "npm run build -w fleet-platform/apps/web-client",

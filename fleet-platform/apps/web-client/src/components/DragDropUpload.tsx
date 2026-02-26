@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { DragEvent } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { buildApiUrl } from '../services/apiClient';
 import '../styles/DragDropUpload.css';
 
 interface DragDropUploadProps {
@@ -105,7 +106,7 @@ export default function DragDropUpload({
           reject(new Error('Network error during upload'));
         });
 
-        xhr.open('POST', 'http://localhost:8000/api/documents');
+        xhr.open('POST', buildApiUrl('/documents'));
         if (token) {
           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         }

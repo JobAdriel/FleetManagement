@@ -1,4 +1,19 @@
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { db } from './firebase';
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
+const DATA_PROVIDER = (import.meta.env.VITE_DATA_PROVIDER || 'api').toLowerCase();
+const IS_FIREBASE_DATA = DATA_PROVIDER === 'firebase';
+
+const VEHICLES_ENDPOINT = /^\/vehicles(?:\/([^/?]+))?(?:\?.*)?$/;
+const DRIVERS_ENDPOINT = /^\/drivers(?:\/([^/?]+))?(?:\?.*)?$/;
+const SERVICE_REQUESTS_ENDPOINT = /^\/service-requests(?:\/([^/?]+))?(?:\?.*)?$/;
+const WORK_ORDERS_ENDPOINT = /^\/work-orders(?:\/([^/?]+))?(?:\?.*)?$/;
+const INVOICES_ENDPOINT = /^\/invoices(?:\/([^/?]+))?(?:\?.*)?$/;
+const QUOTES_ENDPOINT = /^\/quotes(?:\/([^/?]+))?(?:\?.*)?$/;
+const VENDORS_ENDPOINT = /^\/vendors(?:\/([^/?]+))?(?:\?.*)?$/;
+const APPROVALS_ENDPOINT = /^\/approvals(?:\/([^/?]+))?(?:\?.*)?$/;
+const PREVENTIVE_RULES_ENDPOINT = /^\/preventive-rules(?:\/([^/?]+))?(?:\?.*)?$/;
 
 export const buildApiUrl = (endpoint: string): string => {
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
@@ -27,12 +42,229 @@ export interface ApiResponse<T = unknown> {
   status?: number;
 }
 
+const getCurrentTenantId = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem('auth_user');
+  if (!raw) return null;
+
+  try {
+    const user = JSON.parse(raw) as { tenant_id?: string };
+    return user.tenant_id || null;
+  } catch {
+    return null;
+  }
+};
+
+const withVehicleId = (id: string, data: Record<string, unknown>) => ({
+  id,
+  ...data,
+});
+
+const handleFirestoreCollection = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  matcher: RegExp,
+  collectionName: string,
+  notFoundMessage: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  const match = endpoint.match(matcher);
+  if (!match) return null;
+
+  const docId = match[1];
+  const tenantId = getCurrentTenantId();
+
+  if (method === 'GET' && !docId) {
+    const ref = collection(db, collectionName);
+    const snapshot = tenantId
+      ? await getDocs(query(ref, where('tenant_id', '==', tenantId)))
+      : await getDocs(ref);
+
+    const items = snapshot.docs.map((item) => withVehicleId(item.id, item.data() as Record<string, unknown>));
+
+    return {
+      data: {
+        data: items,
+        current_page: 1,
+        last_page: 1,
+        per_page: items.length,
+        total: items.length,
+      },
+      status: 200,
+    };
+  }
+
+  if (method === 'GET' && docId) {
+    const snapshot = await getDoc(doc(db, collectionName, docId));
+    if (!snapshot.exists()) {
+      return { error: notFoundMessage, status: 404 };
+    }
+
+    return {
+      data: withVehicleId(snapshot.id, snapshot.data() as Record<string, unknown>),
+      status: 200,
+    };
+  }
+
+  if (method === 'POST' && !docId) {
+    const payload = (body as Record<string, unknown>) || {};
+    const now = new Date().toISOString();
+    const data = {
+      ...payload,
+      tenant_id: tenantId || payload.tenant_id || 'default',
+      created_at: now,
+      updated_at: now,
+    };
+
+    const created = await addDoc(collection(db, collectionName), data);
+
+    return {
+      data: withVehicleId(created.id, data),
+      status: 201,
+    };
+  }
+
+  if ((method === 'PUT' || method === 'PATCH') && docId) {
+    const payload = (body as Record<string, unknown>) || {};
+    const data = {
+      ...payload,
+      updated_at: new Date().toISOString(),
+    };
+
+    await updateDoc(doc(db, collectionName, docId), data);
+
+    return {
+      data: withVehicleId(docId, data),
+      status: 200,
+    };
+  }
+
+  if (method === 'DELETE' && docId) {
+    await deleteDoc(doc(db, collectionName, docId));
+    return {
+      data: { success: true },
+      status: 200,
+    };
+  }
+
+  return null;
+};
+
+const handleFirestoreVehicles = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(method, endpoint, VEHICLES_ENDPOINT, 'vehicles', 'Vehicle not found', body);
+};
+
+const handleFirestoreDrivers = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(method, endpoint, DRIVERS_ENDPOINT, 'drivers', 'Driver not found', body);
+};
+
+const handleFirestoreServiceRequests = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(
+    method,
+    endpoint,
+    SERVICE_REQUESTS_ENDPOINT,
+    'service_requests',
+    'Service request not found',
+    body
+  );
+};
+
+const handleFirestoreWorkOrders = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(method, endpoint, WORK_ORDERS_ENDPOINT, 'work_orders', 'Work order not found', body);
+};
+
+const handleFirestoreInvoices = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(method, endpoint, INVOICES_ENDPOINT, 'invoices', 'Invoice not found', body);
+};
+
+const handleFirestoreQuotes = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(method, endpoint, QUOTES_ENDPOINT, 'quotes', 'Quote not found', body);
+};
+
+const handleFirestoreVendors = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(method, endpoint, VENDORS_ENDPOINT, 'vendors', 'Vendor not found', body);
+};
+
+const handleFirestoreApprovals = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(method, endpoint, APPROVALS_ENDPOINT, 'approvals', 'Approval not found', body);
+};
+
+const handleFirestorePreventiveRules = async (
+  method: ApiRequestOptions['method'],
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse | null> => {
+  return handleFirestoreCollection(
+    method,
+    endpoint,
+    PREVENTIVE_RULES_ENDPOINT,
+    'preventive_rules',
+    'Preventive rule not found',
+    body
+  );
+};
+
 export const apiClient = {
   async request<T = unknown>(
     endpoint: string,
     options: ApiRequestOptions = {}
   ): Promise<ApiResponse<T>> {
     const { method = 'GET', body, headers = {}, token } = options;
+
+    if (IS_FIREBASE_DATA) {
+      try {
+        const firebaseResponse =
+          await handleFirestoreVehicles(method, endpoint, body)
+          || await handleFirestoreDrivers(method, endpoint, body)
+          || await handleFirestoreServiceRequests(method, endpoint, body)
+          || await handleFirestoreWorkOrders(method, endpoint, body)
+          || await handleFirestoreInvoices(method, endpoint, body)
+          || await handleFirestoreQuotes(method, endpoint, body)
+          || await handleFirestoreVendors(method, endpoint, body)
+          || await handleFirestoreApprovals(method, endpoint, body)
+          || await handleFirestorePreventiveRules(method, endpoint, body);
+        if (firebaseResponse) {
+          return firebaseResponse as ApiResponse<T>;
+        }
+      } catch (error) {
+        return {
+          error: error instanceof Error ? error.message : 'Firestore request failed',
+        };
+      }
+    }
+
     const resolvedToken = resolveToken(token);
 
     const requestHeaders: Record<string, string> = {

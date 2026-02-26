@@ -1,9 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { buildApiUrl } from '../services/apiClient';
+import { auth, getFirebaseUserProfile, upsertFirebaseUserProfile } from '../services/firebase';
 
 export interface AuthUser {
-  id: number;
+  id: number | string;
   name: string;
   email: string;
   tenant_id: string;
@@ -24,6 +27,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AUTH_PROVIDER = (import.meta.env.VITE_AUTH_PROVIDER || 'api').toLowerCase();
+const IS_FIREBASE_AUTH = AUTH_PROVIDER === 'firebase';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -32,6 +37,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Load token from localStorage on mount
   useEffect(() => {
+    if (IS_FIREBASE_AUTH) {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (!firebaseUser) {
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+          setIsLoading(false);
+          return;
+        }
+
+        const profile = await getFirebaseUserProfile(firebaseUser.uid);
+        const firebaseToken = await firebaseUser.getIdToken();
+        const normalizedUser: AuthUser = {
+          id: firebaseUser.uid,
+          name: profile?.name || firebaseUser.displayName || firebaseUser.email || 'User',
+          email: firebaseUser.email || '',
+          tenant_id: profile?.tenant_id || 'default',
+          created_at: profile?.created_at || new Date().toISOString(),
+          updated_at: profile?.updated_at || new Date().toISOString(),
+          roles_names: profile?.roles_names,
+          permissions_names: profile?.permissions_names,
+        };
+
+        setUser(normalizedUser);
+        setToken(firebaseToken);
+        localStorage.setItem('auth_token', firebaseToken);
+        localStorage.setItem('auth_user', JSON.stringify(normalizedUser));
+        setIsLoading(false);
+      });
+
+      return () => unsubscribe();
+    }
+
     const savedToken = localStorage.getItem('auth_token');
     const savedUser = localStorage.getItem('auth_user');
 
@@ -45,7 +84,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/login', {
+      if (IS_FIREBASE_AUTH) {
+        const credentials = await signInWithEmailAndPassword(auth, email, password);
+        const firebaseUser = credentials.user;
+        const profile = await getFirebaseUserProfile(firebaseUser.uid);
+        const firebaseToken = await firebaseUser.getIdToken();
+        const normalizedUser: AuthUser = {
+          id: firebaseUser.uid,
+          name: profile?.name || firebaseUser.displayName || firebaseUser.email || 'User',
+          email: firebaseUser.email || '',
+          tenant_id: profile?.tenant_id || 'default',
+          created_at: profile?.created_at || new Date().toISOString(),
+          updated_at: profile?.updated_at || new Date().toISOString(),
+          roles_names: profile?.roles_names,
+          permissions_names: profile?.permissions_names,
+        };
+
+        setUser(normalizedUser);
+        setToken(firebaseToken);
+        localStorage.setItem('auth_token', firebaseToken);
+        localStorage.setItem('auth_user', JSON.stringify(normalizedUser));
+        return;
+      }
+
+      const response = await fetch(buildApiUrl('/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,10 +115,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      const data = contentType.includes('application/json')
+        ? await response.json()
+        : {};
 
       if (!response.ok) {
-        const errorMessage = data.message || data.error || 'Login failed';
+        const errorMessage =
+          data && typeof data === 'object' && ('message' in data || 'error' in data)
+            ? String((data as { message?: string; error?: string }).message || (data as { message?: string; error?: string }).error || 'Login failed')
+            : 'Login failed';
         throw new Error(errorMessage);
       }
 
@@ -67,12 +135,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       localStorage.setItem('auth_token', loginToken);
       localStorage.setItem('auth_user', JSON.stringify(loginUser));
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error('Cannot connect to API server. Check backend URL or Vite proxy settings.');
+      }
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = (): void => {
+    if (IS_FIREBASE_AUTH) {
+      signOut(auth).catch(() => undefined);
+    }
     setUser(null);
     setToken(null);
     localStorage.removeItem('auth_token');
@@ -87,7 +163,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   ): Promise<void> => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/register', {
+      if (IS_FIREBASE_AUTH) {
+        const credentials = await createUserWithEmailAndPassword(auth, email, password);
+        const firebaseUser = credentials.user;
+
+        await updateProfile(firebaseUser, { displayName: name });
+        await upsertFirebaseUserProfile(firebaseUser.uid, {
+          name,
+          tenant_id,
+          roles_names: ['client'],
+          permissions_names: [],
+        });
+
+        const firebaseToken = await firebaseUser.getIdToken();
+        const normalizedUser: AuthUser = {
+          id: firebaseUser.uid,
+          name,
+          email: firebaseUser.email || email,
+          tenant_id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          roles_names: ['client'],
+          permissions_names: [],
+        };
+
+        setUser(normalizedUser);
+        setToken(firebaseToken);
+        localStorage.setItem('auth_token', firebaseToken);
+        localStorage.setItem('auth_user', JSON.stringify(normalizedUser));
+        return;
+      }
+
+      const response = await fetch(buildApiUrl('/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

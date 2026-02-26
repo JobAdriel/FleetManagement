@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { apiClient } from '../services/apiClient';
+import { apiClient, buildApiUrl } from '../services/apiClient';
 import '../styles/DocumentList.css';
 
 interface Document {
@@ -58,7 +58,7 @@ export default function DocumentList({ entityType, entityId, refreshTrigger }: D
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/documents/${documentId}/download`, {
+      const response = await fetch(buildApiUrl(`/documents/${documentId}/download`), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

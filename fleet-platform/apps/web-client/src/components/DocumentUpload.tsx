@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { buildApiUrl } from '../services/apiClient';
 import '../styles/DocumentUpload.css';
 
 interface DocumentUploadProps {
@@ -43,7 +44,7 @@ export default function DocumentUpload({ entityType, entityId, onUploadSuccess }
       if (entityType) formData.append('entity_type', entityType);
       if (entityId) formData.append('entity_id', entityId);
 
-      const response = await fetch('http://localhost:8000/api/documents', {
+      const response = await fetch(buildApiUrl('/documents'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

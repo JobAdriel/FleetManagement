@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "your-firebase-project-id"
+  },
+  "targets": {
+    "your-firebase-project-id": {
+      "hosting": {
+        "admin": [
+          "your-admin-site-id"
+        ],
+        "client": [
+          "your-client-site-id"
+        ]
+      }
+    }
+  }
+}
