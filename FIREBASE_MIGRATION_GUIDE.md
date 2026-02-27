@@ -29,17 +29,8 @@ To deploy everything, choose one of these paths:
   - `admin` → `fleet-platform/apps/web-admin/dist`
   - `client` → `fleet-platform/apps/web-client/dist`
 - `.firebaserc` template with hosting target mapping
-- Root scripts:
-  - `npm run build:firebase`
-  - `npm run firebase:deploy:admin`
-  - `npm run firebase:deploy:client`
-  - `npm run firebase:deploy`
-   - `npm run firebase:deploy:firestore`
-   - `npm run firebase:deploy:rules`
-   - `npm run firebase:deploy:indexes`
-- Firestore configuration files:
-   - `firestore.rules`
-   - `firestore.indexes.json`
+- Root scripts include `npm run build:firebase`, `npm run firebase:deploy:admin`, `npm run firebase:deploy:client`, `npm run firebase:deploy`, `npm run firebase:deploy:firestore`, `npm run firebase:deploy:rules`, and `npm run firebase:deploy:indexes`
+- Firestore configuration files include `firestore.rules` and `firestore.indexes.json`
 - Frontend document upload/download calls now use `VITE_API_BASE_URL` (no hardcoded localhost)
 - `.env.production.example` created for both frontend apps
 - Firebase Auth support added in both frontends (switchable by env)
@@ -201,9 +192,8 @@ Start with a production-safe intermediate architecture:
 
 - Added tenant-aware Firestore rules and deployed them to production.
 - Added Firestore composite indexes for migrated collections and deployed indexes.
-- Tightened permissions to role-based behavior:
-   - Admin/super_admin: full in-tenant CRUD on migrated collections.
-   - Non-admin: create `service_requests`, update `notifications` (mark-read flow), read-only for admin-managed resources.
-   - Delete operations restricted to admin/super_admin.
+- Tightened permissions to role-based behavior: admin/super_admin have full in-tenant CRUD on migrated collections.
+- Tightened permissions to role-based behavior: non-admin users can create `service_requests`, update `notifications` (mark-read flow), and have read-only access on admin-managed resources.
+- Tightened permissions to role-based behavior: delete operations are restricted to admin/super_admin.
 - Added and documented Firebase Hosting multisite deployment for admin/client apps.
 - Added production env setup for Firebase Auth + Firestore data provider in both frontends.

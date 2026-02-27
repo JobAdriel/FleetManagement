@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\WorkOrderStatusChanged;
 use App\Models\WorkOrder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class WorkOrderController extends Controller
 {
@@ -75,7 +76,7 @@ class WorkOrderController extends Controller
             'job_details' => 'sometimes|nullable|string',
         ]);
 
-        \Log::info('🔍 Work Order Update Request', [
+        Log::info('🔍 Work Order Update Request', [
             'work_order_id' => $workOrder->id,
             'old_vehicle_id' => $workOrder->vehicle_id,
             'new_vehicle_id' => $validated['vehicle_id'] ?? 'not provided',
@@ -95,7 +96,7 @@ class WorkOrderController extends Controller
         // Refresh and load relationships to ensure updated vehicle is returned
         $fresh = $workOrder->fresh(['vehicle', 'quote', 'shop']);
         
-        \Log::info('✅ Work Order Updated', [
+        Log::info('✅ Work Order Updated', [
             'work_order_id' => $fresh->id,
             'vehicle_id' => $fresh->vehicle_id,
             'vehicle_make' => $fresh->vehicle?->make ?? 'null',
