@@ -21,6 +21,7 @@
     "firebase:deploy:firestore": "npx firebase-tools deploy --only firestore",
     "firebase:deploy:rules": "npx firebase-tools deploy --only firestore:rules",
     "firebase:deploy:indexes": "npx firebase-tools deploy --only firestore:indexes",
+    "firebase:seed": "powershell -ExecutionPolicy Bypass -File ./scripts/seed-firestore.ps1",
     "firebase:deploy": "npm run build:firebase && npx firebase-tools deploy --only hosting",
     "build": "npm run build --workspaces",
     "build:admin": "npm run build -w fleet-platform/apps/web-admin",

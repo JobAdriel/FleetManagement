@@ -7,7 +7,13 @@ export const usePermission = () => {
 
   const hasPermission = (permission: string): boolean => {
     if (!typedUser) return false;
-    return typedUser.permissions_names?.includes(permission) || false;
+    const userRoles = typedUser.roles_names || [];
+    const userPermissions = typedUser.permissions_names || [];
+
+    if (userRoles.some(role => role.toLowerCase() === 'admin')) return true;
+    if (userPermissions.includes('*')) return true;
+
+    return userPermissions.includes(permission);
   };
 
   const hasRole = (role: string): boolean => {

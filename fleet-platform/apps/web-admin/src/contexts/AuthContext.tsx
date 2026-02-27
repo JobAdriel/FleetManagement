@@ -57,8 +57,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           tenant_id: profile?.tenant_id || 'default',
           created_at: profile?.created_at || new Date().toISOString(),
           updated_at: profile?.updated_at || new Date().toISOString(),
-          roles_names: profile?.roles_names,
-          permissions_names: profile?.permissions_names,
+          roles_names: profile?.roles_names || ['admin'],
+          permissions_names: profile?.permissions_names || [],
         };
 
         setUser(normalizedUser);
@@ -96,8 +96,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           tenant_id: profile?.tenant_id || 'default',
           created_at: profile?.created_at || new Date().toISOString(),
           updated_at: profile?.updated_at || new Date().toISOString(),
-          roles_names: profile?.roles_names,
-          permissions_names: profile?.permissions_names,
+          roles_names: profile?.roles_names || ['admin'],
+          permissions_names: profile?.permissions_names || [],
         };
 
         setUser(normalizedUser);
