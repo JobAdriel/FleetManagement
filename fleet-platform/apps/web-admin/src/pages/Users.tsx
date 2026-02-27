@@ -108,8 +108,8 @@ export default function Users() {
     const lowerFilter = filter.toLowerCase();
     return users.filter(
       (user) =>
-        user.name.toLowerCase().includes(lowerFilter) ||
-        user.email.toLowerCase().includes(lowerFilter) ||
+        (user.name ?? '').toLowerCase().includes(lowerFilter) ||
+        (user.email ?? '').toLowerCase().includes(lowerFilter) ||
         (user.roles_names || []).some(role => role.toLowerCase().includes(lowerFilter))
     );
   }, [users, filter]);
@@ -280,11 +280,13 @@ export default function Users() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="search-input"
+            title="Search users"
           />
           <select
             className="status-select"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
+            title="Filter by role"
           >
             <option value="all">All Roles</option>
             {roles.map((role) => (
@@ -338,7 +340,7 @@ export default function Users() {
                     <td>{user.email}</td>
                     <td>
                       {(user.roles_names || []).map(role => (
-                        <span key={role} className="badge badge-info" style={{ marginRight: '4px' }}>
+                        <span key={role} className="badge badge-info badge-spaced">
                           {role}
                         </span>
                       ))}
@@ -419,6 +421,7 @@ export default function Users() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
+                  title="User name"
                 />
               </div>
 
@@ -429,6 +432,7 @@ export default function Users() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
+                  title="User email"
                 />
               </div>
 
@@ -440,18 +444,20 @@ export default function Users() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required={formMode === 'create'}
                   minLength={8}
+                  title="User password"
                 />
               </div>
 
               <div className="form-group">
                 <label>Roles</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="stack-vertical-gap-8">
                   {roles.map(role => (
-                    <label key={role.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label key={role.id} className="inline-flex-center-gap-8">
                       <input
                         type="checkbox"
                         checked={formData.roles.includes(role.name)}
                         onChange={() => handleRoleToggle(role.name)}
+                        title={`Assign role ${role.name}`}
                       />
                       {role.name}
                     </label>

@@ -42,31 +42,54 @@ function Invoke-FirebasePasswordSignIn($apiKey, $email, $password) {
   return Invoke-RestMethod -Method Post -Uri $signInUrl -ContentType 'application/json' -Body $signInBody
 }
 
+function New-FirebaseEmailPasswordUser($apiKey, $email, $password) {
+  $signUpUrl = "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$apiKey"
+  $signUpBody = @{ email = $email; password = $password; returnSecureToken = $true } | ConvertTo-Json
+  return Invoke-RestMethod -Method Post -Uri $signUpUrl -ContentType 'application/json' -Body $signUpBody
+}
+
+function Ensure-FirebasePasswordUser($apiKey, $email, $password) {
+  try {
+    return Invoke-FirebasePasswordSignIn -apiKey $apiKey -email $email -password $password
+  } catch {
+    try {
+      $created = New-FirebaseEmailPasswordUser -apiKey $apiKey -email $email -password $password
+      return $created
+    } catch {
+      throw "Failed to provision Firebase Auth user for $email. $($_.Exception.Message)"
+    }
+  }
+}
+
 function Invoke-FirestorePatchDoc($projectId, $collection, $docId, $data, $headers) {
   $url = "https://firestore.googleapis.com/v1/projects/$projectId/databases/(default)/documents/$collection/$docId"
   $body = (To-FsFields $data) | ConvertTo-Json -Depth 40
   Invoke-RestMethod -Method Patch -Uri $url -Headers $headers -ContentType 'application/json' -Body $body | Out-Null
 }
 
-$auth = Invoke-FirebasePasswordSignIn -apiKey $ApiKey -email $AdminEmail -password $AdminPassword
+$auth = Ensure-FirebasePasswordUser -apiKey $ApiKey -email $AdminEmail -password $AdminPassword
 $headers = @{ Authorization = "Bearer $($auth.idToken)" }
 $now = (Get-Date).ToUniversalTime().ToString('o')
 
 $builtInUsers = @(
-  @{ email = 'admin@acb.local'; password = 'password'; name = 'Admin User'; tenant = 'acb' },
-  @{ email = 'sm@acb.local'; password = 'password'; name = 'Service Manager'; tenant = 'acb' },
-  @{ email = 'workshop@acb.local'; password = 'password'; name = 'Workshop User'; tenant = 'acb' }
+  @{ email = 'admin@acb.local'; password = 'password'; name = 'Admin User'; tenant = 'acb'; roles = @('admin'); permissions = @('*') },
+  @{ email = 'sm@acb.local'; password = 'password'; name = 'Service Manager'; tenant = 'acb'; roles = @('manager'); permissions = @('view_vehicles','view_service_requests','edit_service_requests','view_work_orders','edit_work_orders') },
+  @{ email = 'workshop@acb.local'; password = 'password'; name = 'Workshop User'; tenant = 'acb'; roles = @('technician'); permissions = @('view_service_requests','edit_service_requests','view_work_orders','edit_work_orders') },
+  @{ email = 'owner@sgs.local'; password = 'password'; name = 'Fleet Owner'; tenant = 'sgs'; roles = @('admin'); permissions = @('*') },
+  @{ email = 'approver@sgs.local'; password = 'password'; name = 'Approver User'; tenant = 'sgs'; roles = @('approver'); permissions = @('view_quotes','approve_quotes','view_work_orders','create_work_orders') },
+  @{ email = 'dispatcher@sgs.local'; password = 'password'; name = 'Dispatcher User'; tenant = 'sgs'; roles = @('dispatcher'); permissions = @('view_service_requests','create_service_requests','view_vehicles','view_drivers') }
 )
 
 foreach ($u in $builtInUsers) {
-  $signedIn = Invoke-FirebasePasswordSignIn -apiKey $ApiKey -email $u.email -password $u.password
+  $signedIn = Ensure-FirebasePasswordUser -apiKey $ApiKey -email $u.email -password $u.password
   Invoke-FirestorePatchDoc -projectId $ProjectId -collection 'users' -docId $signedIn.localId -headers @{ Authorization = "Bearer $($signedIn.idToken)" } -data @{
     name = $u.name
     tenant_id = $u.tenant
-    roles_names = @('admin')
-    permissions_names = @('*')
+    roles_names = $u.roles
+    permissions_names = $u.permissions
     created_at = $now
     updated_at = $now
+    email = $u.email
   }
 }
 

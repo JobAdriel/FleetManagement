@@ -15,9 +15,19 @@ export const RoleBasedRoute = ({
   requiredPermissions = [],
 }: RoleBasedRouteProps) => {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const authUser = user as AuthUser | null;
+  const userRoles = authUser?.roles_names || [];
+  const userPermissions = authUser?.permissions_names || [];
+
+  const isAdmin = userRoles.some((role) => {
+    const normalizedRole = role.toLowerCase();
+    return normalizedRole === 'admin' || normalizedRole === 'super_admin';
+  });
+
+  const hasWildcardPermission = userPermissions.includes('*');
 
   if (isLoading) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
+    return <div className="route-message">Loading...</div>;
   }
 
   if (!isAuthenticated) {
@@ -25,12 +35,11 @@ export const RoleBasedRoute = ({
   }
 
   if (requiredRoles.length > 0) {
-    const userRoles = (user as AuthUser | null)?.roles_names || [];
-    const hasRequiredRole = requiredRoles.some(role => userRoles.includes(role));
+    const hasRequiredRole = isAdmin || requiredRoles.some(role => userRoles.includes(role));
 
     if (!hasRequiredRole) {
       return (
-        <div style={{ padding: '20px', textAlign: 'center', color: '#c00' }}>
+        <div className="route-message route-message-error">
           <h2>Access Denied</h2>
           <p>You do not have the required role to access this page.</p>
           <a href="/">Return to Dashboard</a>
@@ -40,12 +49,14 @@ export const RoleBasedRoute = ({
   }
 
   if (requiredPermissions.length > 0) {
-    const userPermissions = (user as AuthUser | null)?.permissions_names || [];
-    const hasRequiredPermission = requiredPermissions.some(perm => userPermissions.includes(perm));
+    const hasRequiredPermission =
+      isAdmin ||
+      hasWildcardPermission ||
+      requiredPermissions.some(perm => userPermissions.includes(perm));
 
     if (!hasRequiredPermission) {
       return (
-        <div style={{ padding: '20px', textAlign: 'center', color: '#c00' }}>
+        <div className="route-message route-message-error">
           <h2>Access Denied</h2>
           <p>You do not have the required permissions to access this page.</p>
           <a href="/">Return to Dashboard</a>

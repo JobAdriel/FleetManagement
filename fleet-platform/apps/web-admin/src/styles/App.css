@@ -122,6 +122,15 @@ select:focus {
   animation: slideIn 0.3s ease;
 }
 
+.route-message {
+  padding: 20px;
+  text-align: center;
+}
+
+.route-message-error {
+  color: #c00;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

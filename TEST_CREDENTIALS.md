@@ -1,13 +1,25 @@
 # Fleet Management Platform - Test Credentials
 
+## Production (Firebase Hosting)
+
+### Admin Portal (Live)
+
+- **URL:** [https://fleet-management-admin.web.app/](https://fleet-management-admin.web.app/)
+
+### Client Portal (Live)
+
+- **URL:** [https://fleet-management-client.web.app/](https://fleet-management-client.web.app/)
+
 ## Development Servers
 
 ### Frontend (Admin Portal)
-- **URL:** http://localhost:5174/
+
+- **URL:** [http://localhost:5174/](http://localhost:5174/)
 - **Start:** `cd fleet-platform/apps/web-admin && npm run dev`
 
 ### Backend API
-- **URL:** http://localhost:8000/api
+
+- **URL:** [http://localhost:8000/api](http://localhost:8000/api)
 - **Start:** `cd fleet-platform/apps/api && php artisan serve`
 
 ## Test User Credentials
@@ -51,12 +63,14 @@ All users have password: `password`
 ## Test Data Summary
 
 ### ACB Tenant
+
 - 25 Vehicles (ACB-0001 to ACB-0025)
 - 8 Drivers (ACB Driver 1-8)
 - 4 Vendors (ACB Workshop, Manila Motor Repair, etc.)
 - 4 Preventive Rules (Oil Change, Inspection, etc.)
 
 ### SGS Tenant
+
 - 50 Vehicles (SGS-0001 to SGS-0050)
 - 12 Drivers (SGS Driver 1-12)
 - 3 Vendors (SGS Fleet Service, etc.)
@@ -79,18 +93,20 @@ All users have password: `password`
 ## Quick Start
 
 1. Start the backend API:
+
    ```bash
    cd fleet-platform/apps/api
    php artisan serve
    ```
 
 2. Start the frontend (in a new terminal):
+
    ```bash
    cd fleet-platform/apps/web-admin
    npm run dev
    ```
 
-3. Open http://localhost:5174/ in your browser
+3. Open [http://localhost:5174/](http://localhost:5174/) in your browser
 
 4. Login with: `admin@acb.local` / `password`
 

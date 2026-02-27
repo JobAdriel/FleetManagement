@@ -99,8 +99,8 @@ export default function Drivers() {
     const needle = filter.toLowerCase();
     return drivers.filter((driver) => {
       return (
-        driver.name.toLowerCase().includes(needle) ||
-        driver.license_number.toLowerCase().includes(needle) ||
+        (driver.name ?? '').toLowerCase().includes(needle) ||
+        (driver.license_number ?? '').toLowerCase().includes(needle) ||
         (driver.contact_email || '').toLowerCase().includes(needle) ||
         (driver.contact_phone || '').includes(filter)
       );
@@ -347,6 +347,7 @@ export default function Drivers() {
                   value={formData.name}
                   onChange={(e) => handleFormChange('name', e.target.value)}
                   required
+                  title="Driver name"
                 />
               </div>
               <div className="form-group">
@@ -355,6 +356,7 @@ export default function Drivers() {
                   value={formData.license_number}
                   onChange={(e) => handleFormChange('license_number', e.target.value)}
                   required
+                  title="License number"
                 />
               </div>
               <div className="form-group">
@@ -363,6 +365,7 @@ export default function Drivers() {
                   value={formData.license_class}
                   onChange={(e) => handleFormChange('license_class', e.target.value)}
                   required
+                  title="License class"
                 />
               </div>
               <div className="form-group">
@@ -372,6 +375,7 @@ export default function Drivers() {
                   value={formData.license_expiry}
                   onChange={(e) => handleFormChange('license_expiry', e.target.value)}
                   required
+                  title="License expiry date"
                 />
               </div>
               <div className="form-group">
@@ -379,6 +383,7 @@ export default function Drivers() {
                 <input
                   value={formData.contact_phone}
                   onChange={(e) => handleFormChange('contact_phone', e.target.value)}
+                  title="Contact phone"
                 />
               </div>
               <div className="form-group">
@@ -387,6 +392,7 @@ export default function Drivers() {
                   type="email"
                   value={formData.contact_email}
                   onChange={(e) => handleFormChange('contact_email', e.target.value)}
+                  title="Contact email"
                 />
               </div>
               {formMode === 'edit' && (
@@ -395,6 +401,7 @@ export default function Drivers() {
                   <select
                     value={formData.employment_status}
                     onChange={(e) => handleFormChange('employment_status', e.target.value)}
+                    title="Employment status"
                   >
                     <option value="active">active</option>
                     <option value="inactive">inactive</option>

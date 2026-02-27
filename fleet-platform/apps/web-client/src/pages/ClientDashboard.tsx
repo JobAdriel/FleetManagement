@@ -1,14 +1,16 @@
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import '../styles/ClientDashboard.css';
 
 export default function ClientDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const stats = [
-    { label: 'Your Vehicles', value: '5', icon: '🚗' },
-    { label: 'Active Requests', value: '2', icon: '📝' },
-    { label: 'Pending Quotes', value: '1', icon: '💰' },
-    { label: 'Recent Invoices', value: '3', icon: '📄' },
+    { label: 'Your Vehicles', value: '5', icon: '🚗', to: '/client/vehicles' },
+    { label: 'Active Requests', value: '2', icon: '📝', to: '/client/requests' },
+    { label: 'Pending Quotes', value: '1', icon: '💰', to: '/client/requests' },
+    { label: 'Recent Invoices', value: '3', icon: '📄', to: '/client/invoices' },
   ];
 
   return (
@@ -20,18 +22,34 @@ export default function ClientDashboard() {
 
       <div className="dashboard-stats">
         {stats.map((stat, idx) => (
-          <div key={idx} className="stat-card">
+          <button
+            key={idx}
+            type="button"
+            className="stat-card stat-card-btn"
+            onClick={() => navigate(stat.to)}
+            title={`Open ${stat.label}`}
+          >
             <div className="stat-icon">{stat.icon}</div>
             <div className="stat-info">
               <p className="stat-label">{stat.label}</p>
               <p className="stat-value">{stat.value}</p>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
       <div className="dashboard-sections">
-        <section className="section">
+        <section
+          className="section section-link"
+          onClick={() => navigate('/client/requests')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              navigate('/client/requests');
+            }
+          }}
+        >
           <h2>📋 Recent Service Requests</h2>
           <div className="empty-state">
             <p>No recent service requests</p>
@@ -39,7 +57,17 @@ export default function ClientDashboard() {
           </div>
         </section>
 
-        <section className="section">
+        <section
+          className="section section-link"
+          onClick={() => navigate('/client/invoices')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              navigate('/client/invoices');
+            }
+          }}
+        >
           <h2>📄 Recent Invoices</h2>
           <div className="empty-state">
             <p>No recent invoices</p>

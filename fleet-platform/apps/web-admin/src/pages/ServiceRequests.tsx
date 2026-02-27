@@ -125,9 +125,9 @@ export default function ServiceRequests() {
       const vehicle = vehicleLookup[request.vehicle_id];
       const vehicleLabel = vehicle ? `${vehicle.make} ${vehicle.model} ${vehicle.plate}`.toLowerCase() : '';
       return (
-        request.issue_description.toLowerCase().includes(needle) ||
-        request.status.toLowerCase().includes(needle) ||
-        request.priority.toLowerCase().includes(needle) ||
+        (request.issue_description ?? '').toLowerCase().includes(needle) ||
+        (request.status ?? '').toLowerCase().includes(needle) ||
+        (request.priority ?? '').toLowerCase().includes(needle) ||
         vehicleLabel.includes(needle)
       );
     });
@@ -358,6 +358,7 @@ export default function ServiceRequests() {
                   value={formData.vehicle_id}
                   onChange={(e) => handleFormChange('vehicle_id', e.target.value)}
                   required
+                  title="Select vehicle"
                 >
                   <option value="">Select a vehicle</option>
                   {vehicles.map((vehicle) => (
@@ -374,6 +375,7 @@ export default function ServiceRequests() {
                   value={formData.issue_description}
                   onChange={(e) => handleFormChange('issue_description', e.target.value)}
                   required
+                  title="Issue description"
                 />
               </div>
               <div className="form-group">
@@ -382,6 +384,7 @@ export default function ServiceRequests() {
                   value={formData.priority}
                   onChange={(e) => handleFormChange('priority', e.target.value)}
                   required
+                  title="Priority"
                 >
                   <option value="low">low</option>
                   <option value="normal">normal</option>
@@ -394,6 +397,7 @@ export default function ServiceRequests() {
                   <select
                     value={formData.status}
                     onChange={(e) => handleFormChange('status', e.target.value)}
+                    title="Service request status"
                   >
                     <option value="draft">draft</option>
                     <option value="submitted">submitted</option>

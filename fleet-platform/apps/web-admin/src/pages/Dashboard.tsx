@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient from '../services/apiClient';
 import '../styles/Dashboard.css';
@@ -85,7 +85,6 @@ const toDateLabel = (value: unknown): string => {
 export default function Dashboard() {
   const AUTO_REFRESH_MS = 30000;
   const { user, token } = useAuth();
-  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     vehicles: 0,
     drivers: 0,
@@ -308,7 +307,12 @@ export default function Dashboard() {
                   <span>{loading ? '...' : `${status.value} (${status.percent}%)`}</span>
                 </div>
                 <div className="status-track">
-                  <div className="status-fill" style={{ width: `${loading ? 0 : status.percent}%` }} />
+                  <progress
+                    className="status-fill"
+                    max={100}
+                    value={loading ? 0 : status.percent}
+                    title={`${status.label} ${loading ? 0 : status.percent}%`}
+                  />
                 </div>
               </div>
             ))}
@@ -318,24 +322,15 @@ export default function Dashboard() {
         <div className="card">
           <h3>Quick Actions</h3>
           <div className="quick-actions">
-            <button
-              className="action-btn"
-              onClick={() => navigate('/admin/service-requests')}
-            >
+            <Link className="action-btn" to="/admin/service-requests">
               Create Service Request
-            </button>
-            <button
-              className="action-btn"
-              onClick={() => navigate('/admin/work-orders')}
-            >
+            </Link>
+            <Link className="action-btn" to="/admin/work-orders">
               Create Work Order
-            </button>
-            <button
-              className="action-btn"
-              onClick={() => navigate('/admin/reports')}
-            >
+            </Link>
+            <Link className="action-btn" to="/admin/reports">
               View Reports
-            </button>
+            </Link>
           </div>
         </div>
       </div>

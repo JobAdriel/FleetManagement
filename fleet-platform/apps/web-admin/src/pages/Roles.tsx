@@ -86,7 +86,7 @@ export default function Roles() {
   const filteredRoles = useMemo(() => {
     if (!filter) return roles;
     const lowerFilter = filter.toLowerCase();
-    return roles.filter((role) => role.name.toLowerCase().includes(lowerFilter));
+    return roles.filter((role) => (role.name ?? '').toLowerCase().includes(lowerFilter));
   }, [roles, filter]);
 
   const resourceFilteredRoles = useMemo(() => {
@@ -230,9 +230,10 @@ export default function Roles() {
   }, [permissions]);
 
   const permissionGroups = useMemo(() => {
+    const needle = permissionSearch.toLowerCase();
     const entries = Object.entries(groupedPermissions).map(([resource, perms]) => {
       const filtered = permissionSearch
-        ? perms.filter((perm) => perm.name.toLowerCase().includes(permissionSearch.toLowerCase()))
+        ? perms.filter((perm) => (perm.name ?? '').toLowerCase().includes(needle))
         : perms;
       return [resource, filtered] as const;
     });
@@ -295,11 +296,13 @@ export default function Roles() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="search-input"
+            title="Search roles"
           />
           <select
             className="status-select"
             value={resourceFilter}
             onChange={(e) => setResourceFilter(e.target.value)}
+            title="Filter roles by resource"
           >
             <option value="all">All Resources</option>
             {resourceFilters.map((resource) => (
@@ -346,7 +349,7 @@ export default function Roles() {
                   </td>
                   <td>
                     {(role.permissions || []).slice(0, 3).map((permission) => (
-                      <span key={permission.id} className="badge badge-info" style={{ marginRight: '4px' }}>
+                      <span key={permission.id} className="badge badge-info badge-spaced">
                         {permission.name}
                       </span>
                     ))}
@@ -358,7 +361,7 @@ export default function Roles() {
                     <button 
                       className="btn btn-link" 
                       onClick={() => handleViewPermissions(role)}
-                      style={{ padding: '4px 8px', fontSize: '0.9em' }}
+                      title={`View permissions for ${role.name}`}
                     >
                       {role.permissions?.length || 0} permissions
                     </button>
@@ -388,7 +391,7 @@ export default function Roles() {
 
       {isFormOpen && (
         <div className="modal-overlay" onClick={handleCloseForm}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+          <div className="modal-content modal-content-width-700" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{formMode === 'create' ? 'Create Role' : 'Edit Role'}</h2>
               <button className="modal-close" onClick={handleCloseForm}>
@@ -407,6 +410,7 @@ export default function Roles() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                   placeholder="e.g., Fleet Manager"
+                  title="Role name"
                 />
               </div>
 
@@ -417,44 +421,32 @@ export default function Roles() {
                   placeholder="Filter permissions..."
                   value={permissionSearch}
                   onChange={(e) => setPermissionSearch(e.target.value)}
-                  className="search-input"
-                  style={{ marginBottom: '12px' }}
+                  className="search-input search-input-with-margin"
+                  title="Filter permissions"
                 />
-                <div style={{ 
-                  maxHeight: '400px', 
-                  overflowY: 'auto', 
-                  border: '1px solid #e0e0e0', 
-                  borderRadius: '4px', 
-                  padding: '12px' 
-                }}>
+                <div className="permission-panel">
                   {permissionGroups.map(([resource, perms]) => (
-                    <div key={resource} style={{ marginBottom: '16px' }}>
-                      <h4 style={{ 
-                        textTransform: 'capitalize', 
-                        marginBottom: '8px', 
-                        color: '#2c3e50',
-                        fontSize: '0.95em',
-                        fontWeight: '600'
-                      }}>
+                    <div key={resource} className="permission-group">
+                      <h4 className="permission-group-title">
                         {resource}
                       </h4>
                       <button
                         type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '6px 10px', marginBottom: '8px' }}
+                        className="btn btn-secondary btn-group-toggle"
                         onClick={() => handleTogglePermissionGroup(resource)}
                       >
                         Toggle All
                       </button>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginLeft: '12px' }}>
+                      <div className="permission-options">
                         {perms.map(permission => (
-                          <label key={permission.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <label key={permission.id} className="inline-flex-center-gap-8">
                             <input
                               type="checkbox"
                               checked={formData.permissions.includes(permission.name)}
                               onChange={() => handlePermissionToggle(permission.name)}
+                              title={`Toggle permission ${permission.name}`}
                             />
-                            <span style={{ fontSize: '0.9em' }}>{permission.name}</span>
+                            <span className="permission-option-name">{permission.name}</span>
                           </label>
                         ))}
                       </div>
@@ -478,7 +470,7 @@ export default function Roles() {
 
       {selectedRole && (
         <div className="modal-overlay" onClick={() => setSelectedRole(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+          <div className="modal-content modal-content-width-600" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{selectedRole.name} - Permissions</h2>
               <button className="modal-close" onClick={() => setSelectedRole(null)}>
@@ -486,29 +478,21 @@ export default function Roles() {
               </button>
             </div>
 
-            <div style={{ padding: '20px' }}>
+            <div className="permissions-preview-content">
               {selectedRole.permissions && selectedRole.permissions.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                <div className="permissions-preview-grid">
                   {selectedRole.permissions.map(permission => (
-                    <div 
-                      key={permission.id} 
-                      style={{ 
-                        padding: '8px 12px', 
-                        background: '#f8f9fa', 
-                        borderRadius: '4px',
-                        fontSize: '0.9em'
-                      }}
-                    >
+                    <div key={permission.id} className="permission-preview-chip">
                       {permission.name}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p style={{ textAlign: 'center', color: '#95a5a6' }}>No permissions assigned</p>
+                <p className="permission-empty">No permissions assigned</p>
               )}
             </div>
 
-            <div style={{ padding: '0 20px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="permissions-preview-actions">
               <button className="btn btn-secondary" onClick={() => setSelectedRole(null)}>
                 Close
               </button>

@@ -234,9 +234,25 @@
 }
 
 .status-fill {
+  width: 100%;
   height: 100%;
+  border: 0;
+  appearance: none;
+}
+
+.status-fill::-webkit-progress-bar {
+  background: transparent;
+}
+
+.status-fill::-webkit-progress-value {
   background: linear-gradient(90deg, #3498db, #1f78c1);
+  border-radius: 999px;
   transition: width 0.2s ease;
+}
+
+.status-fill::-moz-progress-bar {
+  background: linear-gradient(90deg, #3498db, #1f78c1);
+  border-radius: 999px;
 }
 
 /* Quick Actions */
@@ -247,6 +263,8 @@
 }
 
 .action-btn {
+  display: block;
+  text-align: center;
   padding: 12px 16px;
   background-color: #3498db;
   color: white;

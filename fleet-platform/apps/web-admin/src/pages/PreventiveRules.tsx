@@ -112,10 +112,11 @@ export default function PreventiveRules() {
   }, [fetchRules]);
 
   const filteredRules = useMemo(() => {
+    const needle = filter.toLowerCase();
     return rules.filter(rule =>
       filter === '' ||
-      rule.name.toLowerCase().includes(filter.toLowerCase()) ||
-      rule.trigger_type.toLowerCase().includes(filter.toLowerCase())
+      (rule.name ?? '').toLowerCase().includes(needle) ||
+      (rule.trigger_type ?? '').toLowerCase().includes(needle)
     );
   }, [rules, filter]);
 
@@ -213,7 +214,7 @@ export default function PreventiveRules() {
     <div className="resource-page">
       <div className="page-header">
         <h1>Preventive Maintenance Rules</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="inline-flex-gap-10">
           <button onClick={handleShowNextDue} className="btn btn-secondary">
             📊 View Next Due
           </button>
@@ -342,6 +343,7 @@ export default function PreventiveRules() {
                   value={formData.trigger_type}
                   onChange={(e) => setFormData({ ...formData, trigger_type: e.target.value })}
                   required
+                  title="Select trigger type"
                 >
                   <option value="mileage">Mileage (km)</option>
                   <option value="time">Time (days)</option>

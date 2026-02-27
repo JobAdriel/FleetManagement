@@ -10,7 +10,10 @@ export const usePermission = () => {
     const userRoles = typedUser.roles_names || [];
     const userPermissions = typedUser.permissions_names || [];
 
-    if (userRoles.some(role => role.toLowerCase() === 'admin')) return true;
+    if (userRoles.some(role => {
+      const normalizedRole = role.toLowerCase();
+      return normalizedRole === 'admin' || normalizedRole === 'super_admin';
+    })) return true;
     if (userPermissions.includes('*')) return true;
 
     return userPermissions.includes(permission);

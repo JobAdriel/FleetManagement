@@ -1,6 +1,7 @@
 # Firebase Migration Guide
 
 This repository currently uses:
+
 - Laravel API (`fleet-platform/apps/api`)
 - PostgreSQL + Redis + MinIO (via Docker)
 - React apps (`web-admin`, `web-client`)
@@ -49,6 +50,11 @@ To deploy everything, choose one of these paths:
 - Firestore Approvals + Preventive Rules CRUD support added in both frontends (switchable by env)
 - Firestore Users + Roles + Notifications support added in both frontends (switchable by env)
 
+### Live Hosting URLs
+
+- Admin: [https://fleet-management-admin.web.app/](https://fleet-management-admin.web.app/)
+- Client: [https://fleet-management-client.web.app/](https://fleet-management-client.web.app/)
+
 ## Run with Firebase (current implementation)
 
 In each app env file (`web-admin` and `web-client`), set:
@@ -63,6 +69,7 @@ In each app env file (`web-admin` and `web-client`), set:
 - `VITE_FIREBASE_APP_ID=...`
 
 With this setting:
+
 - Login/register/logout uses Firebase Auth
 - Vehicle endpoints (`/vehicles`) use Firestore
 - Driver endpoints (`/drivers`) use Firestore
@@ -110,6 +117,7 @@ After selecting your Firebase project and creating Firestore in Native mode:
 Rules are tenant-aware and require authenticated users, with role checks for role management.
 
 Current permission defaults:
+
 - Admin/super_admin: full in-tenant CRUD across migrated collections
 - Non-admin: can create service requests, can update notifications (mark-read flow), read-only on admin-managed resources
 - Delete operations: admin-only
@@ -117,7 +125,7 @@ Current permission defaults:
 ### Role permission matrix (Firestore)
 
 | Resource / Action | Admin / Super Admin | Non-Admin (same tenant) |
-|---|---|---|
+| --- | --- | --- |
 | Read migrated collections | ✅ | ✅ |
 | Create `service_requests` | ✅ | ✅ |
 | Create admin-managed resources (`vehicles`, `drivers`, `work_orders`, `invoices`, `quotes`, `vendors`, `approvals`, `preventive_rules`, `roles`) | ✅ | ❌ |
@@ -155,6 +163,7 @@ After deploy, verify these in both admin and client apps:
 ## Full backend conversion scope (Laravel -> Firebase)
 
 You currently expose many REST endpoints in `fleet-platform/apps/api/routes/api.php`:
+
 - Auth/login/register/logout/me
 - Vehicles, drivers, service-requests, rfqs, quotes
 - work-orders, invoices, vendors, approvals
@@ -181,6 +190,7 @@ A full rewrite requires rebuilding these in Firebase Functions and updating both
 ## Next recommended action
 
 Start with a production-safe intermediate architecture:
+
 - Keep Laravel backend for now (deploy to Cloud Run)
 - Deploy both frontends on Firebase Hosting
 - Then migrate APIs endpoint-by-endpoint to Firebase Functions
@@ -188,6 +198,7 @@ Start with a production-safe intermediate architecture:
 ## Policy change log
 
 ### 2026-02-26
+
 - Added tenant-aware Firestore rules and deployed them to production.
 - Added Firestore composite indexes for migrated collections and deployed indexes.
 - Tightened permissions to role-based behavior:

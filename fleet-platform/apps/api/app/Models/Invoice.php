@@ -9,7 +9,19 @@ class Invoice extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['tenant_id', 'customer_tenant_id', 'invoice_number', 'subtotal', 'tax', 'total', 'due_date', 'status', 'pdf_document_id', 'notes'];
+    protected $fillable = [
+        'tenant_id',
+        'customer_tenant_id',
+        'work_order_id',
+        'invoice_number',
+        'subtotal',
+        'tax',
+        'total',
+        'due_date',
+        'status',
+        'pdf_document_id',
+        'notes',
+    ];
 
     public function tenant()
     {
@@ -24,5 +36,10 @@ class Invoice extends Model
     public function items()
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function workOrder()
+    {
+        return $this->belongsTo(WorkOrder::class);
     }
 }

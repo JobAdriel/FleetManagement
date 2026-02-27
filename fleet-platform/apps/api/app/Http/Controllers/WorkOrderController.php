@@ -24,8 +24,11 @@ class WorkOrderController extends Controller
             'quote_id' => 'required|uuid|exists:quotes,id',
             'vehicle_id' => 'nullable|uuid|exists:vehicles,id',
             'shop_id' => 'required|uuid|exists:vendors,id',
-            'assigned_to' => 'nullable|integer|exists:users,id',
+            'assigned_to' => 'nullable|string|max:255',
             'status' => 'nullable|string',
+            'owner_decision' => 'nullable|string|in:pending,approved,rejected,cancelled',
+            'shop_notes' => 'nullable|string',
+            'job_details' => 'nullable|string',
             'start_at' => 'nullable|date',
             'complete_at' => 'nullable|date',
         ]);
@@ -40,6 +43,7 @@ class WorkOrderController extends Controller
         $wo = WorkOrder::create([
             'tenant_id' => $request->user()->tenant_id,
             'vehicle_id' => $vehicleId,
+            'owner_decision' => $validated['owner_decision'] ?? 'pending',
             ...$validated,
         ]);
 
@@ -62,10 +66,13 @@ class WorkOrderController extends Controller
 
         $validated = $request->validate([
             'vehicle_id' => 'sometimes|uuid|exists:vehicles,id',
-            'assigned_to' => 'sometimes|integer|exists:users,id',
+            'assigned_to' => 'sometimes|nullable|string|max:255',
             'start_at' => 'sometimes|date',
             'complete_at' => 'sometimes|date',
             'status' => 'sometimes|string|in:pending,in_progress,completed,cancelled',
+            'owner_decision' => 'sometimes|string|in:pending,approved,rejected,cancelled',
+            'shop_notes' => 'sometimes|nullable|string',
+            'job_details' => 'sometimes|nullable|string',
         ]);
 
         \Log::info('🔍 Work Order Update Request', [

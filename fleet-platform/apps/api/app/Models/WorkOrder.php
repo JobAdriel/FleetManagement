@@ -10,7 +10,19 @@ class WorkOrder extends Model
 {
     use HasFactory, HasUuids;
 
-    protected $fillable = ['tenant_id', 'quote_id', 'vehicle_id', 'shop_id', 'assigned_to', 'start_at', 'complete_at', 'status'];
+    protected $fillable = [
+        'tenant_id',
+        'quote_id',
+        'vehicle_id',
+        'shop_id',
+        'assigned_to',
+        'start_at',
+        'complete_at',
+        'status',
+        'owner_decision',
+        'shop_notes',
+        'job_details',
+    ];
 
     protected $casts = [
         'start_at' => 'datetime',

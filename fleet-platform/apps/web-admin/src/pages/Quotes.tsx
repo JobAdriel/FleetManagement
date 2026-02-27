@@ -7,6 +7,7 @@ import '../styles/ResourcePage.css';
 interface Quote {
   id: string;
   rfq_id: string;
+  rfq?: Rfq | null;
   rfq_code?: string;
   vendor_id?: string;
   subtotal: number;
@@ -24,6 +25,12 @@ interface Rfq {
   due_date: string;
 }
 
+interface ServiceRequestOption {
+  id: string;
+  status?: string;
+  issue_description?: string;
+}
+
 interface Vendor {
   id: string;
   name: string;
@@ -38,7 +45,19 @@ interface PaginatedResponse<T> {
   total?: number;
 }
 
+const toNumber = (value: unknown): number => {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const toText = (value: unknown, fallback = ''): string => {
+  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) return fallback;
+  return String(value);
+};
+
 const emptyForm = {
+  service_request_id: '',
   rfq_id: '',
   rfq_code: '', // Add auto-generated RFQ code
   vendor_id: '',
@@ -53,6 +72,7 @@ export default function Quotes() {
   const { token } = useAuth();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [rfqs, setRfqs] = useState<Rfq[]>([]);
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequestOption[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -137,32 +157,57 @@ export default function Quotes() {
     }
   }, [token]);
 
+  const fetchServiceRequests = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await apiClient.get('/service-requests?per_page=100', token);
+      const paginatedData = response.data as PaginatedResponse<ServiceRequestOption>;
+      if (paginatedData?.data) {
+        setServiceRequests(paginatedData.data);
+      }
+    } catch (error) {
+      console.error('Failed to load service requests:', error);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchQuotes();
     fetchVendors();
     fetchRfqs();
-  }, [fetchQuotes]);
+    fetchServiceRequests();
+  }, [fetchQuotes, fetchVendors, fetchRfqs, fetchServiceRequests]);
 
   useEffect(() => {
     if (isFormOpen) {
       fetchRfqs();
       fetchVendors();
+      fetchServiceRequests();
     }
-  }, [isFormOpen, fetchRfqs, fetchVendors]);
+  }, [isFormOpen, fetchRfqs, fetchVendors, fetchServiceRequests]);
+
+  const handleServiceRequestChange = (serviceRequestId: string) => {
+    const linkedRfq = rfqs.find((rfq) => rfq.service_request_id === serviceRequestId);
+    setFormData((prev) => ({
+      ...prev,
+      service_request_id: serviceRequestId,
+      rfq_id: linkedRfq?.id || '',
+    }));
+  };
 
   const filteredQuotes = useMemo(() => {
+    const needle = filter.toLowerCase();
     return quotes.filter(quote =>
       filter === '' ||
-      quote.status.toLowerCase().includes(filter.toLowerCase()) ||
-      quote.total.toString().includes(filter) ||
-      quote.rfq_code?.toLowerCase().includes(filter.toLowerCase()) ||
-      quote.vendor_id?.toLowerCase().includes(filter.toLowerCase())
+      (quote.status ?? '').toLowerCase().includes(needle) ||
+      toNumber(quote.total).toString().includes(filter) ||
+      (quote.rfq_code ?? '').toLowerCase().includes(needle) ||
+      (quote.vendor_id ?? '').toLowerCase().includes(needle)
     );
   }, [quotes, filter]);
 
   const statusFilteredQuotes = useMemo(() => {
     if (statusFilter === 'all') return filteredQuotes;
-    return filteredQuotes.filter((quote) => quote.status === statusFilter);
+    return filteredQuotes.filter((quote) => toText(quote.status) === statusFilter);
   }, [filteredQuotes, statusFilter]);
 
   const sortedQuotes = useMemo(() => {
@@ -193,10 +238,10 @@ export default function Quotes() {
   }, [rfqs]);
 
   const summary = useMemo(() => {
-    const totalAmount = quotes.reduce((sum, quote) => sum + quote.total, 0);
-    const draftCount = quotes.filter((quote) => quote.status === 'draft').length;
-    const approvedCount = quotes.filter((quote) => quote.status === 'approved').length;
-    const pendingCount = quotes.filter((quote) => quote.status === 'submitted').length;
+    const totalAmount = quotes.reduce((sum, quote) => sum + toNumber(quote.total), 0);
+    const draftCount = quotes.filter((quote) => toText(quote.status) === 'draft').length;
+    const approvedCount = quotes.filter((quote) => toText(quote.status) === 'approved').length;
+    const pendingCount = quotes.filter((quote) => toText(quote.status) === 'submitted').length;
     return { totalAmount, draftCount, approvedCount, pendingCount };
   }, [quotes]);
 
@@ -224,6 +269,10 @@ export default function Quotes() {
 
     const rows = selectedQuotes
       .map((quote) => {
+        const statusLabel = toText(quote.status, 'unknown');
+        const subtotal = toNumber(quote.subtotal);
+        const tax = toNumber(quote.tax);
+        const total = toNumber(quote.total);
         const vendorName = quote.vendor_id ? vendorMap[quote.vendor_id]?.name || 'Unknown Vendor' : 'Unassigned';
         const rfqLabel = quote.rfq_code || (quote.rfq_id ? `RFQ-${quote.rfq_id.slice(0, 8)}` : 'N/A');
         const validity = quote.validity_until || rfqMap[quote.rfq_id || '']?.due_date || 'N/A';
@@ -231,10 +280,10 @@ export default function Quotes() {
           <tr>
             <td>${rfqLabel}</td>
             <td>${vendorName}</td>
-            <td>${quote.status}</td>
-            <td>₱${quote.subtotal.toFixed(2)}</td>
-            <td>₱${quote.tax.toFixed(2)}</td>
-            <td>₱${quote.total.toFixed(2)}</td>
+            <td>${statusLabel}</td>
+            <td>₱${subtotal.toFixed(2)}</td>
+            <td>₱${tax.toFixed(2)}</td>
+            <td>₱${total.toFixed(2)}</td>
             <td>${validity}</td>
           </tr>
         `;
@@ -306,6 +355,7 @@ export default function Quotes() {
   const handleEdit = (quote: Quote) => {
     setFormMode('edit');
     setFormData({
+      service_request_id: quote.rfq?.service_request_id || '',
       rfq_id: quote.rfq_id,
       rfq_code: quote.rfq_code ? quote.rfq_code : '', // Preserve existing RFQ code
       vendor_id: quote.vendor_id || '',
@@ -327,6 +377,7 @@ export default function Quotes() {
 
     try {
       const payload = {
+        service_request_id: formData.service_request_id || null,
         rfq_code: formData.rfq_code,
         rfq_id: formData.rfq_id || null,
         vendor_id: formData.vendor_id || null,
@@ -415,11 +466,13 @@ export default function Quotes() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="search-input"
+            title="Search quotes"
           />
           <select
             className="status-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'all' | Quote['status'])}
+            title="Filter quotes by status"
           >
             <option value="all">All Statuses</option>
             <option value="draft">Draft</option>
@@ -439,6 +492,7 @@ export default function Quotes() {
             <tr>
               <th>Select</th>
               <th>RFQ</th>
+                <th>Service Request</th>
               <th>Vendor</th>
               <th onClick={() => handleSort('status')}>
                 Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
@@ -468,18 +522,20 @@ export default function Quotes() {
                     type="checkbox"
                     checked={selectedQuoteIds.includes(quote.id)}
                     onChange={() => toggleSelection(quote.id)}
+                    title={`Select quote ${quote.id.slice(0, 8)}`}
                   />
                 </td>
                 <td>{quote.rfq_code || (quote.rfq_id ? `RFQ-${quote.rfq_id.slice(0, 8)}` : 'N/A')}</td>
+                <td>{quote.rfq?.service_request_id ? `SR-${quote.rfq.service_request_id.slice(0, 8)}` : 'N/A'}</td>
                 <td>{quote.vendor_id ? vendorMap[quote.vendor_id]?.name || quote.vendor_id : 'Unassigned'}</td>
                 <td>
-                  <span className={`status-badge status-${quote.status}`}>
-                    {quote.status}
+                  <span className={`status-badge status-${toText(quote.status, 'unknown')}`}>
+                    {toText(quote.status, 'unknown')}
                   </span>
                 </td>
-                <td>₱{quote.subtotal.toFixed(2)}</td>
-                <td>₱{quote.tax.toFixed(2)}</td>
-                <td>₱{quote.total.toFixed(2)}</td>
+                <td>₱{toNumber(quote.subtotal).toFixed(2)}</td>
+                <td>₱{toNumber(quote.tax).toFixed(2)}</td>
+                <td>₱{toNumber(quote.total).toFixed(2)}</td>
                 <td>{quote.validity_until || rfqMap[quote.rfq_id || '']?.due_date || 'N/A'}</td>
                 <td>{quote.created_at ? new Date(quote.created_at).toLocaleDateString() : 'N/A'}</td>
                 {(canEdit || canDelete) && (
@@ -545,7 +601,24 @@ export default function Quotes() {
                   readOnly={formMode === 'create'} // Auto-generated, read-only on create
                   required
                   placeholder="Auto-generated"
+                  title="RFQ code"
                 />
+              </div>
+
+              <div className="form-group">
+                <label>Service Request ID (Optional)</label>
+                <select
+                  value={formData.service_request_id}
+                  onChange={(e) => handleServiceRequestChange(e.target.value)}
+                  title="Service request"
+                >
+                  <option value="">No Service Request</option>
+                  {serviceRequests.map((request) => (
+                    <option key={request.id} value={request.id}>
+                      SR-{request.id.slice(0, 8)} ({request.status || 'draft'})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
@@ -554,11 +627,12 @@ export default function Quotes() {
                   value={formData.rfq_id}
                   onChange={(e) => setFormData({ ...formData, rfq_id: e.target.value })}
                   disabled={formMode === 'edit'}
+                  title="Linked RFQ"
                 >
                   <option value="">No RFQ (Standalone Quote)</option>
                   {rfqs.map(rfq => (
                     <option key={rfq.id} value={rfq.id}>
-                      RFQ-{rfq.id.slice(0, 8)} (Due: {rfq.due_date})
+                      RFQ-{rfq.id.slice(0, 8)} · SR-{rfq.service_request_id.slice(0, 8)} (Due: {rfq.due_date})
                     </option>
                   ))}
                 </select>
@@ -569,6 +643,7 @@ export default function Quotes() {
                 <select
                   value={formData.vendor_id}
                   onChange={(e) => setFormData({ ...formData, vendor_id: e.target.value })}
+                  title="Vendor"
                 >
                   <option value="">Select Vendor</option>
                   {vendors.map(vendor => (
@@ -587,6 +662,7 @@ export default function Quotes() {
                   value={formData.subtotal}
                   onChange={(e) => setFormData({ ...formData, subtotal: e.target.value })}
                   required
+                  title="Subtotal"
                 />
               </div>
 
@@ -597,6 +673,7 @@ export default function Quotes() {
                   step="0.01"
                   value={formData.tax}
                   onChange={(e) => setFormData({ ...formData, tax: e.target.value })}
+                  title="Tax"
                 />
               </div>
 
@@ -607,7 +684,8 @@ export default function Quotes() {
                   step="0.01"
                   value={(parseFloat(formData.subtotal || '0') + parseFloat(formData.tax || '0')).toFixed(2)}
                   readOnly
-                  style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                  className="input-readonly"
+                  title="Calculated total"
                 />
               </div>
 
@@ -617,6 +695,7 @@ export default function Quotes() {
                   type="date"
                   value={formData.validity_until}
                   onChange={(e) => setFormData({ ...formData, validity_until: e.target.value })}
+                  title="Validity date"
                 />
               </div>
 
@@ -626,6 +705,7 @@ export default function Quotes() {
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   required
+                  title="Quote status"
                 >
                   <option value="draft">Draft</option>
                   <option value="submitted">Submitted</option>

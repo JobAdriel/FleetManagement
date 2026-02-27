@@ -11,7 +11,7 @@ class InvoiceController extends Controller
     {
         return response()->json(
             Invoice::where('tenant_id', $request->user()->tenant_id)
-                ->with('customer')
+                ->with(['customer', 'workOrder.vehicle', 'workOrder.quote'])
                 ->orderBy('created_at', 'desc')
                 ->paginate(15)
         );
@@ -21,9 +21,12 @@ class InvoiceController extends Controller
     {
         $validated = $request->validate([
             'customer_tenant_id' => 'required|uuid|exists:tenants,id',
+            'work_order_id' => 'nullable|uuid|exists:work_orders,id',
             'subtotal' => 'nullable|numeric|min:0',
             'tax' => 'nullable|numeric|min:0',
             'due_date' => 'required|date',
+            'status' => 'nullable|string|in:draft,sent,paid,disputed',
+            'notes' => 'nullable|string',
         ]);
 
         $invoiceNumber = 'INV-' . date('Ymd') . '-' . random_int(1000, 9999);
@@ -32,11 +35,11 @@ class InvoiceController extends Controller
             'tenant_id' => $request->user()->tenant_id,
             'invoice_number' => $invoiceNumber,
             'total' => ($validated['subtotal'] ?? 0) + ($validated['tax'] ?? 0),
-            'status' => 'draft',
+            'status' => $validated['status'] ?? 'draft',
             ...$validated,
         ]);
 
-        return response()->json($invoice, 201);
+        return response()->json($invoice->load(['customer', 'workOrder.vehicle', 'workOrder.quote']), 201);
     }
 
     public function show(Request $request, Invoice $invoice)
@@ -54,10 +57,13 @@ class InvoiceController extends Controller
         }
 
         $validated = $request->validate([
+            'customer_tenant_id' => 'sometimes|uuid|exists:tenants,id',
+            'work_order_id' => 'sometimes|nullable|uuid|exists:work_orders,id',
             'subtotal' => 'sometimes|numeric|min:0',
             'tax' => 'sometimes|numeric|min:0',
             'due_date' => 'sometimes|date',
             'status' => 'sometimes|string|in:draft,sent,paid,disputed',
+            'notes' => 'sometimes|nullable|string',
         ]);
 
         if (isset($validated['subtotal']) || isset($validated['tax'])) {
@@ -65,7 +71,7 @@ class InvoiceController extends Controller
         }
 
         $invoice->update($validated);
-        return response()->json($invoice);
+        return response()->json($invoice->fresh(['customer', 'workOrder.vehicle', 'workOrder.quote']));
     }
 
     public function destroy(Request $request, Invoice $invoice)

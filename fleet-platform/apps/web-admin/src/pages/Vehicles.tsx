@@ -101,10 +101,10 @@ export default function Vehicles() {
     return vehicles.filter((vehicle) => {
       const needle = filter.toLowerCase();
       return (
-        vehicle.make.toLowerCase().includes(needle) ||
-        vehicle.model.toLowerCase().includes(needle) ||
-        vehicle.plate.toLowerCase().includes(needle) ||
-        vehicle.vin.toLowerCase().includes(needle)
+        (vehicle.make ?? '').toLowerCase().includes(needle) ||
+        (vehicle.model ?? '').toLowerCase().includes(needle) ||
+        (vehicle.plate ?? '').toLowerCase().includes(needle) ||
+        (vehicle.vin ?? '').toLowerCase().includes(needle)
       );
     });
   }, [vehicles, filter]);
@@ -345,6 +345,7 @@ export default function Vehicles() {
                   value={formData.plate}
                   onChange={(e) => handleFormChange('plate', e.target.value)}
                   required
+                  title="Vehicle plate"
                 />
               </div>
               <div className="form-group">
@@ -353,6 +354,7 @@ export default function Vehicles() {
                   value={formData.vin}
                   onChange={(e) => handleFormChange('vin', e.target.value)}
                   required
+                  title="Vehicle VIN"
                 />
               </div>
               <div className="form-group">
@@ -361,6 +363,7 @@ export default function Vehicles() {
                   value={formData.make}
                   onChange={(e) => handleFormChange('make', e.target.value)}
                   required
+                  title="Vehicle make"
                 />
               </div>
               <div className="form-group">
@@ -369,6 +372,7 @@ export default function Vehicles() {
                   value={formData.model}
                   onChange={(e) => handleFormChange('model', e.target.value)}
                   required
+                  title="Vehicle model"
                 />
               </div>
               <div className="form-group">
@@ -378,6 +382,7 @@ export default function Vehicles() {
                   value={formData.year}
                   onChange={(e) => handleFormChange('year', e.target.value)}
                   required
+                  title="Vehicle year"
                 />
               </div>
               <div className="form-group">
@@ -386,6 +391,7 @@ export default function Vehicles() {
                   type="number"
                   value={formData.odometer}
                   onChange={(e) => handleFormChange('odometer', e.target.value)}
+                  title="Odometer"
                 />
               </div>
               <div className="form-group">
@@ -393,6 +399,7 @@ export default function Vehicles() {
                 <input
                   value={formData.fuel_type}
                   onChange={(e) => handleFormChange('fuel_type', e.target.value)}
+                  title="Fuel type"
                 />
               </div>
               {formMode === 'edit' && (
@@ -401,6 +408,7 @@ export default function Vehicles() {
                   <select
                     value={formData.status}
                     onChange={(e) => handleFormChange('status', e.target.value)}
+                    title="Vehicle status"
                   >
                     <option value="active">active</option>
                     <option value="inactive">inactive</option>

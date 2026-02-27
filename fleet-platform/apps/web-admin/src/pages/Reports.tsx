@@ -337,18 +337,18 @@ export default function Reports() {
                             type="checkbox"
                             checked={selectedSpendIds.includes(item.vehicle_id)}
                             onChange={() => toggleSpendSelection(item.vehicle_id)}
+                            title={`Select ${item.vehicle_plate} for maintenance spend comparison`}
                           />
                         </label>
                         <div className="bar-label">{item.vehicle_plate}</div>
                         <div className="bar-wrapper">
-                          <div
-                            className="bar"
-                            style={{
-                              width: `${(item.total_spend / maxSpend) * 100}%`
-                            }}
-                          >
-                            ₱{item.total_spend.toLocaleString()}
-                          </div>
+                          <progress
+                            className="bar-progress"
+                            max={100}
+                            value={(item.total_spend / maxSpend) * 100}
+                            title={`Maintenance spend ratio for ${item.vehicle_plate}: ${((item.total_spend / maxSpend) * 100).toFixed(0)}%`}
+                          />
+                          <span className="bar-progress-label">₱{item.total_spend.toLocaleString()}</span>
                         </div>
                         <div className="bar-info">{item.work_order_count} orders</div>
                       </div>
@@ -387,18 +387,18 @@ export default function Reports() {
                             type="checkbox"
                             checked={selectedDowntimeIds.includes(item.vehicle_id)}
                             onChange={() => toggleDowntimeSelection(item.vehicle_id)}
+                            title={`Select ${item.vehicle_plate} for downtime comparison`}
                           />
                         </label>
                         <div className="bar-label">{item.vehicle_plate}</div>
                         <div className="bar-wrapper">
-                          <div
-                            className="bar downtime-bar"
-                            style={{
-                              width: `${(item.downtime_days / maxDowntime) * 100}%`
-                            }}
-                          >
-                            {item.downtime_days} days
-                          </div>
+                          <progress
+                            className="bar-progress downtime-bar"
+                            max={100}
+                            value={(item.downtime_days / maxDowntime) * 100}
+                            title={`Downtime ratio for ${item.vehicle_plate}: ${((item.downtime_days / maxDowntime) * 100).toFixed(0)}%`}
+                          />
+                          <span className="bar-progress-label">{item.downtime_days} days</span>
                         </div>
                         <div className="bar-info">{item.work_order_count} orders</div>
                       </div>

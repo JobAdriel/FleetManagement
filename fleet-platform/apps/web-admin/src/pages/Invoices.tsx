@@ -9,6 +9,18 @@ interface Invoice {
   tenant_id: string;
   invoice_number: string;
   customer_tenant_id: string;
+  work_order_id?: string | null;
+  work_order?: {
+    id: string;
+    status?: string;
+    job_details?: string | null;
+    vehicle?: {
+      id: string;
+      make?: string;
+      model?: string;
+      plate?: string;
+    } | null;
+  } | null;
   customer?: {
     id: string;
     name: string;
@@ -20,7 +32,22 @@ interface Invoice {
   total: number;
   due_date: string;
   status: 'draft' | 'sent' | 'paid' | 'disputed';
+  notes?: string | null;
   created_at: string;
+}
+
+interface WorkOrderOption {
+  id: string;
+  status?: string;
+  job_details?: string | null;
+  vehicle?: {
+    make?: string;
+    model?: string;
+    plate?: string;
+  } | null;
+  quote?: {
+    total?: number;
+  } | null;
 }
 
 type SortKey = 'invoice_number' | 'total' | 'due_date' | 'status' | 'created_at';
@@ -35,10 +62,12 @@ interface PaginatedResponse<T> {
 
 const emptyForm = {
   customer_tenant_id: '',
+  work_order_id: '',
   subtotal: '',
   tax: '',
   due_date: '',
   status: 'draft' as 'draft' | 'sent' | 'paid' | 'disputed',
+  notes: '',
 };
 
 export default function Invoices() {
@@ -61,6 +90,7 @@ export default function Invoices() {
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [workOrders, setWorkOrders] = useState<WorkOrderOption[]>([]);
 
   const getErrorMessage = (error: unknown, fallback: string) => {
     return error instanceof Error ? error.message : fallback;
@@ -89,17 +119,36 @@ export default function Invoices() {
     }
   }, [token]);
 
+  const fetchWorkOrders = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/work-orders?per_page=100', token || undefined);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const payload = (response.data || {}) as PaginatedResponse<WorkOrderOption> | WorkOrderOption[];
+      const items = Array.isArray(payload) ? payload : payload.data || [];
+      setWorkOrders(items);
+    } catch {
+      setWorkOrders([]);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchInvoices(currentPage);
   }, [fetchInvoices, currentPage]);
+
+  useEffect(() => {
+    fetchWorkOrders();
+  }, [fetchWorkOrders]);
 
   const filteredInvoices = useMemo(() => {
     if (!filter) return invoices;
     const lowerFilter = filter.toLowerCase();
     return invoices.filter(
       (invoice) =>
-        invoice.invoice_number.toLowerCase().includes(lowerFilter) ||
-        invoice.status.toLowerCase().includes(lowerFilter)
+        (invoice.invoice_number ?? '').toLowerCase().includes(lowerFilter) ||
+        (invoice.status ?? '').toLowerCase().includes(lowerFilter)
     );
   }, [invoices, filter]);
 
@@ -139,10 +188,12 @@ export default function Invoices() {
     setEditingId(invoice.id);
     setFormData({
       customer_tenant_id: invoice.customer_tenant_id,
+      work_order_id: invoice.work_order_id || '',
       subtotal: invoice.subtotal.toString(),
       tax: invoice.tax.toString(),
       due_date: invoice.due_date.split('T')[0],
       status: invoice.status,
+      notes: invoice.notes || '',
     });
     setFormError(null);
     setIsFormOpen(true);
@@ -166,10 +217,12 @@ export default function Invoices() {
     try {
       const payload = {
         customer_tenant_id: formData.customer_tenant_id || user?.tenant_id,
+        work_order_id: formData.work_order_id || null,
         subtotal: parseFloat(formData.subtotal) || 0,
         tax: parseFloat(formData.tax) || 0,
         due_date: formData.due_date,
         status: formData.status,
+        notes: formData.notes || null,
       };
 
       const response =
@@ -240,6 +293,11 @@ export default function Invoices() {
     const customerName = selectedInvoice.customer?.name || 'Unknown Customer';
     const customerSlug = selectedInvoice.customer?.slug || selectedInvoice.customer_tenant_id;
     const customerDescription = selectedInvoice.customer?.description || '';
+    const workOrderLabel = selectedInvoice.work_order_id ? `WO-${selectedInvoice.work_order_id.slice(0, 8)}` : 'N/A';
+    const vehicleLabel = selectedInvoice.work_order?.vehicle
+      ? `${selectedInvoice.work_order.vehicle.make || ''} ${selectedInvoice.work_order.vehicle.model || ''} ${selectedInvoice.work_order.vehicle.plate ? `(${selectedInvoice.work_order.vehicle.plate})` : ''}`.trim()
+      : 'N/A';
+    const jobDetails = selectedInvoice.work_order?.job_details || selectedInvoice.notes || 'N/A';
 
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) {
@@ -252,11 +310,14 @@ export default function Invoices() {
       { label: 'Customer Code', value: customerSlug },
       { label: 'Invoice Number', value: selectedInvoice.invoice_number },
       { label: 'Status', value: selectedInvoice.status },
+      { label: 'Work Order', value: workOrderLabel },
+      { label: 'Vehicle', value: vehicleLabel },
       { label: 'Due Date', value: formatDate(selectedInvoice.due_date) },
       { label: 'Created', value: formatDate(selectedInvoice.created_at) },
       { label: 'Subtotal', value: formatCurrency(selectedInvoice.subtotal) },
       { label: 'Tax', value: formatCurrency(selectedInvoice.tax) },
       { label: 'Total', value: formatCurrency(selectedInvoice.total) },
+      { label: 'Job Details', value: jobDetails },
     ];
 
     const content = `
@@ -345,11 +406,13 @@ export default function Invoices() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="search-input"
+            title="Search invoices"
           />
           <select
             className="status-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'all' | Invoice['status'])}
+            title="Filter invoices by status"
           >
             <option value="all">All Statuses</option>
             <option value="draft">Draft</option>
@@ -385,6 +448,8 @@ export default function Invoices() {
                     Invoice # {sortConfig.key === 'invoice_number' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
                   <th>Customer</th>
+                  <th>Work Order</th>
+                  <th>Vehicle</th>
                   <th onClick={() => handleSort('total')} className="sortable">
                     Total {sortConfig.key === 'total' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                   </th>
@@ -413,10 +478,17 @@ export default function Invoices() {
                         name="selectedInvoice"
                         checked={selectedInvoiceId === invoice.id}
                         onChange={() => setSelectedInvoiceId(invoice.id)}
+                        title={`Select invoice ${invoice.invoice_number}`}
                       />
                     </td>
                     <td>{invoice.invoice_number}</td>
                     <td>{invoice.customer?.name || invoice.customer_tenant_id}</td>
+                    <td>{invoice.work_order_id ? `WO-${invoice.work_order_id.slice(0, 8)}` : 'N/A'}</td>
+                    <td>
+                      {invoice.work_order?.vehicle
+                        ? `${invoice.work_order.vehicle.make || ''} ${invoice.work_order.vehicle.model || ''} ${invoice.work_order.vehicle.plate ? `(${invoice.work_order.vehicle.plate})` : ''}`.trim()
+                        : 'N/A'}
+                    </td>
                     <td>{formatCurrency(invoice.total)}</td>
                     <td>{formatDate(invoice.due_date)}</td>
                     <td>
@@ -485,6 +557,31 @@ export default function Invoices() {
 
               <div className="form-row">
                 <div className="form-group">
+                  <label>Work Order</label>
+                  <select
+                    value={formData.work_order_id}
+                    onChange={(e) => {
+                      const selectedWorkOrderId = e.target.value;
+                      const selectedWorkOrder = workOrders.find((workOrder) => workOrder.id === selectedWorkOrderId);
+                      const suggestedSubtotal = selectedWorkOrder?.quote?.total ?? parseFloat(formData.subtotal || '0');
+                      setFormData({
+                        ...formData,
+                        work_order_id: selectedWorkOrderId,
+                        subtotal: suggestedSubtotal ? String(suggestedSubtotal) : formData.subtotal,
+                      });
+                    }}
+                    title="Linked work order"
+                  >
+                    <option value="">No linked work order</option>
+                    {workOrders.map((workOrder) => (
+                      <option key={workOrder.id} value={workOrder.id}>
+                        WO-{workOrder.id.slice(0, 8)} ({workOrder.status || 'pending'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
                   <label>Subtotal *</label>
                   <input
                     type="number"
@@ -493,6 +590,7 @@ export default function Invoices() {
                     value={formData.subtotal}
                     onChange={(e) => setFormData({ ...formData, subtotal: e.target.value })}
                     required
+                    title="Subtotal"
                   />
                 </div>
 
@@ -504,6 +602,19 @@ export default function Invoices() {
                     min="0"
                     value={formData.tax}
                     onChange={(e) => setFormData({ ...formData, tax: e.target.value })}
+                    title="Tax"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Job Details / Notes</label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    rows={3}
+                    title="Job details or notes"
                   />
                 </div>
               </div>
@@ -516,6 +627,7 @@ export default function Invoices() {
                     value={formData.due_date}
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                     required
+                    title="Due date"
                   />
                 </div>
 
@@ -525,6 +637,7 @@ export default function Invoices() {
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as Invoice['status'] })}
                     required
+                    title="Invoice status"
                   >
                     <option value="draft">Draft</option>
                     <option value="sent">Sent</option>

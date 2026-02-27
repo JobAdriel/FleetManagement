@@ -26,6 +26,7 @@ interface Rfq {
 interface Quote {
   id: string;
   total: number;
+  status?: string;
   rfq_id?: string;
   rfq?: Rfq | null;
 }
@@ -45,6 +46,9 @@ interface WorkOrder {
   start_at?: string;
   complete_at?: string;
   status: string;
+  owner_decision?: string;
+  shop_notes?: string;
+  job_details?: string;
   created_at?: string;
   quote?: Quote | null;
   vehicle?: Vehicle | null;
@@ -66,6 +70,9 @@ const emptyForm = {
   shop_id: '',
   assigned_to: '',
   status: 'pending',
+  owner_decision: 'pending',
+  shop_notes: '',
+  job_details: '',
   start_at: '',
   complete_at: '',
 };
@@ -174,11 +181,12 @@ export default function WorkOrders() {
   }, [isFormOpen, formMode, fetchQuotes, fetchVendors, fetchVehicles]);
 
   const filteredWorkOrders = useMemo(() => {
+    const needle = filter.toLowerCase();
     return workOrders.filter((wo) =>
       filter === '' ||
-      wo.status.toLowerCase().includes(filter.toLowerCase()) ||
+      (wo.status ?? '').toLowerCase().includes(needle) ||
       (wo.start_at && wo.start_at.includes(filter)) ||
-      wo.quote_id.toLowerCase().includes(filter.toLowerCase())
+      (wo.quote_id ?? '').toLowerCase().includes(needle)
     );
   }, [workOrders, filter]);
 
@@ -245,6 +253,7 @@ export default function WorkOrders() {
       .map((wo) => {
         const quoteTotal = wo.quote?.total ?? quoteMap[wo.quote_id]?.total ?? 0;
         const shopName = wo.shop?.name ?? vendorMap[wo.shop_id]?.name ?? 'Unknown Shop';
+        const quoteDecision = wo.quote?.status ?? 'pending';
         const vehicle = wo.vehicle; // Direct relationship
         const vehicleMake = vehicle?.make || 'N/A';
         const vehicleModel = vehicle?.model || 'N/A';
@@ -256,8 +265,10 @@ export default function WorkOrders() {
             <td>${vehicleModel}</td>
             <td>${vehiclePlate}</td>
             <td>${shopName}</td>
+            <td>${quoteDecision}</td>
             <td>${wo.status}</td>
             <td>₱${quoteTotal.toFixed(2)}</td>
+            <td>${wo.job_details || wo.shop_notes || '-'}</td>
             <td>${wo.start_at ? new Date(wo.start_at).toLocaleDateString() : 'N/A'}</td>
             <td>${wo.complete_at ? new Date(wo.complete_at).toLocaleDateString() : 'N/A'}</td>
           </tr>
@@ -291,6 +302,7 @@ export default function WorkOrders() {
                 <th>Shop</th>
                 <th>Status</th>
                 <th>Quote Total</th>
+                <th>Job Details</th>
                 <th>Start Date</th>
                 <th>Completion</th>
               </tr>
@@ -344,6 +356,9 @@ export default function WorkOrders() {
       shop_id: workOrder.shop_id,
       assigned_to: workOrder.assigned_to || '',
       status: workOrder.status,
+      owner_decision: workOrder.owner_decision || 'pending',
+      shop_notes: workOrder.shop_notes || '',
+      job_details: workOrder.job_details || '',
       start_at: workOrder.start_at ? workOrder.start_at.split('T')[0] : '',
       complete_at: workOrder.complete_at ? workOrder.complete_at.split('T')[0] : '',
     });
@@ -370,6 +385,9 @@ export default function WorkOrders() {
           shop_id: formData.shop_id,
           assigned_to: formData.assigned_to || null,
           status: formData.status,
+          owner_decision: formData.owner_decision,
+          shop_notes: formData.shop_notes || null,
+          job_details: formData.job_details || null,
           start_at: formData.start_at || null,
           complete_at: formData.complete_at || null,
         };
@@ -385,6 +403,9 @@ export default function WorkOrders() {
           vehicle_id: formData.vehicle_id || null,
           assigned_to: formData.assigned_to || null,
           status: formData.status,
+          owner_decision: formData.owner_decision,
+          shop_notes: formData.shop_notes || null,
+          job_details: formData.job_details || null,
           start_at: formData.start_at || null,
           complete_at: formData.complete_at || null,
         };
@@ -485,11 +506,13 @@ export default function WorkOrders() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="search-input"
+            title="Search work orders"
           />
           <select
             className="status-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'in_progress' | 'completed' | 'cancelled')}
+            title="Filter by work order status"
           >
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
@@ -513,10 +536,13 @@ export default function WorkOrders() {
               <th>Vehicle Model</th>
               <th>Plate</th>
               <th>Shop</th>
+              <th>Quote Decision</th>
               <th>Quote Total</th>
               <th onClick={() => handleSort('status')} className="sortable">
                 Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
+              <th>Owner Decision</th>
+              <th>Job Details</th>
               <th onClick={() => handleSort('start_at')} className="sortable">
                 Start Date {sortConfig.key === 'start_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
               </th>
@@ -537,6 +563,7 @@ export default function WorkOrders() {
                     type="checkbox"
                     checked={selectedWorkOrderIds.includes(wo.id)}
                     onChange={() => toggleSelection(wo.id)}
+                    title={`Select work order ${wo.id.slice(0, 8)}`}
                   />
                 </td>
                 <td>{wo.id.slice(0, 8)}</td>
@@ -544,12 +571,19 @@ export default function WorkOrders() {
                 <td>{vehicle?.model || 'N/A'}</td>
                 <td>{vehicle?.plate || 'N/A'}</td>
                 <td>{wo.shop?.name || vendorMap[wo.shop_id]?.name || wo.shop_id}</td>
+                <td>{wo.quote?.status || quoteMap[wo.quote_id]?.status || 'pending'}</td>
                 <td>₱{((wo.quote?.total ?? quoteMap[wo.quote_id]?.total) || 0).toFixed(2)}</td>
                 <td>
                   <span className={`status-badge status-${wo.status}`}>
                     {wo.status}
                   </span>
                 </td>
+                <td>
+                  <span className={`status-badge status-${wo.owner_decision || 'pending'}`}>
+                    {wo.owner_decision || 'pending'}
+                  </span>
+                </td>
+                <td>{wo.job_details || wo.shop_notes || '-'}</td>
                 <td>{wo.start_at ? new Date(wo.start_at).toLocaleDateString() : 'N/A'}</td>
                 <td>{wo.complete_at ? new Date(wo.complete_at).toLocaleDateString() : 'N/A'}</td>
                 <td>{wo.created_at ? new Date(wo.created_at).toLocaleDateString() : 'N/A'}</td>
@@ -597,7 +631,7 @@ export default function WorkOrders() {
 
       {isFormOpen && (
         <div className="modal-overlay" onClick={handleCloseForm}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '650px' }}>
+          <div className="modal-content modal-content-width-650" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{formMode === 'create' ? 'Create Work Order' : 'Edit Work Order'}</h2>
               <button className="modal-close" onClick={handleCloseForm}>
@@ -615,6 +649,7 @@ export default function WorkOrders() {
                   onChange={(e) => handleQuoteChange(e.target.value)}
                   required
                   disabled={formMode === 'edit'}
+                  title="Select approved quote"
                 >
                   <option value="">Select Approved Quote</option>
                   {quotes.map((quote) => (
@@ -630,6 +665,7 @@ export default function WorkOrders() {
                 <select
                   value={formData.vehicle_id}
                   onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value })}
+                  title="Select vehicle"
                 >
                   <option value="">Select Vehicle</option>
                   {vehicles.map((vehicle) => (
@@ -643,9 +679,9 @@ export default function WorkOrders() {
               {formData.vehicle_id && (() => {
                 const selectedVehicle = vehicles.find(v => v.id === formData.vehicle_id);
                 return selectedVehicle ? (
-                  <div className="form-group" style={{ backgroundColor: '#f0f8ff', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>
-                    <p style={{ margin: '0 0 4px 0', fontSize: '0.9em', color: '#666' }}>Selected Vehicle Details:</p>
-                    <p style={{ margin: '4px 0', fontWeight: '600' }}>
+                  <div className="form-group selected-vehicle-details">
+                    <p className="selected-vehicle-caption">Selected Vehicle Details:</p>
+                    <p className="selected-vehicle-summary">
                       <strong>Make:</strong> {selectedVehicle.make} | <strong>Model:</strong> {selectedVehicle.model} | <strong>Plate:</strong> {selectedVehicle.plate}
                     </p>
                   </div>
@@ -659,6 +695,7 @@ export default function WorkOrders() {
                   onChange={(e) => setFormData({ ...formData, shop_id: e.target.value })}
                   required
                   disabled={formMode === 'edit'}
+                  title="Select shop or vendor"
                 >
                   <option value="">Select Shop/Vendor</option>
                   {vendors.map((vendor) => (
@@ -676,6 +713,7 @@ export default function WorkOrders() {
                   value={formData.assigned_to}
                   onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
                   placeholder="Enter user ID or leave blank"
+                  title="Assigned user ID"
                 />
               </div>
 
@@ -685,6 +723,7 @@ export default function WorkOrders() {
                   type="date"
                   value={formData.start_at}
                   onChange={(e) => setFormData({ ...formData, start_at: e.target.value })}
+                  title="Start date"
                 />
               </div>
 
@@ -694,6 +733,7 @@ export default function WorkOrders() {
                   type="date"
                   value={formData.complete_at}
                   onChange={(e) => setFormData({ ...formData, complete_at: e.target.value })}
+                  title="Completion date"
                 />
               </div>
 
@@ -703,12 +743,47 @@ export default function WorkOrders() {
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   required
+                  title="Work order status"
                 >
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label>Owner Decision</label>
+                <select
+                  value={formData.owner_decision}
+                  onChange={(e) => setFormData({ ...formData, owner_decision: e.target.value })}
+                  title="Owner decision"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Shop Notes</label>
+                <textarea
+                  value={formData.shop_notes}
+                  onChange={(e) => setFormData({ ...formData, shop_notes: e.target.value })}
+                  rows={3}
+                  title="Shop notes"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Job Details</label>
+                <textarea
+                  value={formData.job_details}
+                  onChange={(e) => setFormData({ ...formData, job_details: e.target.value })}
+                  rows={3}
+                  title="Job details"
+                />
               </div>
 
               <div className="form-actions">

@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { buildApiUrl } from '../services/apiClient';
 import { auth, getFirebaseUserProfile, upsertFirebaseUserProfile } from '../services/firebase';
 
@@ -30,6 +31,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const AUTH_PROVIDER = (import.meta.env.VITE_AUTH_PROVIDER || 'api').toLowerCase();
 const IS_FIREBASE_AUTH = AUTH_PROVIDER === 'firebase';
 
+const resolveTenantFromEmail = (email: string): string => {
+  const normalizedEmail = email.toLowerCase();
+  if (normalizedEmail.endsWith('@sgs.local')) return 'sgs';
+  if (normalizedEmail.endsWith('@acb.local')) return 'acb';
+  return 'default';
+};
+
+const isLocalTestEmail = (email: string): boolean => email.toLowerCase().endsWith('.local');
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -57,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           tenant_id: profile?.tenant_id || 'default',
           created_at: profile?.created_at || new Date().toISOString(),
           updated_at: profile?.updated_at || new Date().toISOString(),
-          roles_names: profile?.roles_names || ['admin'],
+          roles_names: profile?.roles_names || ['client'],
           permissions_names: profile?.permissions_names || [],
         };
 
@@ -85,18 +95,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       if (IS_FIREBASE_AUTH) {
-        const credentials = await signInWithEmailAndPassword(auth, email, password);
-        const firebaseUser = credentials.user;
+        let firebaseUser;
+
+        try {
+          const credentials = await signInWithEmailAndPassword(auth, email, password);
+          firebaseUser = credentials.user;
+        } catch (loginError) {
+          const isInvalidCredentialError =
+            loginError instanceof FirebaseError && loginError.code === 'auth/invalid-credential';
+
+          if (!isInvalidCredentialError || !isLocalTestEmail(email)) {
+            throw loginError;
+          }
+
+          try {
+            const createdCredentials = await createUserWithEmailAndPassword(auth, email, password);
+            firebaseUser = createdCredentials.user;
+
+            const fallbackName = email.split('@')[0] || 'Client User';
+            const tenantId = resolveTenantFromEmail(email);
+
+            await updateProfile(firebaseUser, { displayName: fallbackName });
+            await upsertFirebaseUserProfile(firebaseUser.uid, {
+              name: fallbackName,
+              tenant_id: tenantId,
+              roles_names: ['client'],
+              permissions_names: [],
+            });
+          } catch (createError) {
+            if (createError instanceof FirebaseError && createError.code === 'auth/email-already-in-use') {
+              throw new Error('Invalid credentials. Please re-check email/password and try again.');
+            }
+            throw createError;
+          }
+        }
+
         const profile = await getFirebaseUserProfile(firebaseUser.uid);
         const firebaseToken = await firebaseUser.getIdToken();
         const normalizedUser: AuthUser = {
           id: firebaseUser.uid,
           name: profile?.name || firebaseUser.displayName || firebaseUser.email || 'User',
           email: firebaseUser.email || '',
-          tenant_id: profile?.tenant_id || 'default',
+          tenant_id: profile?.tenant_id || resolveTenantFromEmail(firebaseUser.email || email),
           created_at: profile?.created_at || new Date().toISOString(),
           updated_at: profile?.updated_at || new Date().toISOString(),
-          roles_names: profile?.roles_names || ['admin'],
+          roles_names: profile?.roles_names || ['client'],
           permissions_names: profile?.permissions_names || [],
         };
 
@@ -138,6 +181,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       if (error instanceof TypeError) {
         throw new Error('Cannot connect to API server. Check backend URL or Vite proxy settings.');
+      }
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/invalid-credential') {
+          throw new Error('Invalid email or password.');
+        }
+        throw new Error(error.message);
       }
       throw error;
     } finally {

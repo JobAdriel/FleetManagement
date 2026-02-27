@@ -176,6 +176,16 @@
   color: #0c5460;
 }
 
+.badge.status-approved {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.badge.status-rejected {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
 .badge.status-cancelled {
   background-color: #f8d7da;
   color: #721c24;
@@ -212,6 +222,36 @@
   justify-content: space-between;
   color: #95a5a6;
   font-size: 0.9em;
+}
+
+.request-quotes {
+  margin-top: 12px;
+  border-top: 1px solid #eef1f4;
+  padding-top: 12px;
+}
+
+.quote-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.quote-meta {
+  margin-left: 8px;
+  color: #6c7a89;
+  font-size: 0.9em;
+}
+
+.quote-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.quote-actions .btn {
+  padding: 6px 10px;
+  font-size: 0.85em;
 }
 
 /* Modal */
